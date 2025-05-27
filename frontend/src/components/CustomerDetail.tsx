@@ -125,7 +125,7 @@ const CustomerDetail: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} component="div">
               <Typography variant="h6" gutterBottom>Contact Information</Typography>
               <Typography>📧 {customer.email}</Typography>
               <Typography>📞 {customer.phone}</Typography>
@@ -134,7 +134,7 @@ const CustomerDetail: React.FC = () => {
                 <Typography>🏢 {customer.company_name}</Typography>
               )}
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={6} component="div">
               <Typography variant="h6" gutterBottom>Summary</Typography>
               <Typography>
                 Properties: {customer.properties?.length || 0}
@@ -171,7 +171,7 @@ const CustomerDetail: React.FC = () => {
           {customer.properties?.length ? (
             <Grid container spacing={2}>
               {customer.properties.map((property) => (
-                <Grid item xs={12} md={6} key={property.id}>
+                <Grid item xs={12} md={6} key={property.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -202,7 +202,7 @@ const CustomerDetail: React.FC = () => {
           {customer.contacts?.length ? (
             <Grid container spacing={2}>
               {customer.contacts.map((contact) => (
-                <Grid item xs={12} md={6} key={contact.id}>
+                <Grid item xs={12} md={6} key={contact.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
@@ -230,7 +230,7 @@ const CustomerDetail: React.FC = () => {
           {customer.reviews?.length ? (
             <Grid container spacing={2}>
               {customer.reviews.map((review) => (
-                <Grid item xs={12} key={review.id}>
+                <Grid item xs={12} key={review.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
                       <Box display="flex" alignItems="center" mb={1}>
