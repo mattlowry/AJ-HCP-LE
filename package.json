@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "AJ Long Electric Field Service Management System",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
-    "install-backend": "cd backend && pip install -r requirements.txt",
+    "build": "cd frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt",
     "start": "cd backend && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn fsm_core.wsgi:application"
   },
   "repository": {
@@ -12,7 +11,8 @@
     "url": "https://github.com/mattlowry/AJ-HCP-LE.git"
   },
   "engines": {
-    "node": "18.x",
-    "python": "3.11.x"
-  }
+    "node": "18.x"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }
