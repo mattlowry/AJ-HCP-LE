@@ -1,8 +1,7 @@
-[providers]
-python = "backend"
+providers = ["python", "node"]
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["python311", "nodejs-18_x"]
 
 [phases.install]
 cmds = [
