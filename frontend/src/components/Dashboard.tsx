@@ -49,22 +49,22 @@ const Dashboard: React.FC = () => {
     {
       title: 'Add New Customer',
       description: 'Create a new customer profile',
-      action: () => navigate('/customers'),
+      action: () => navigate('/customers/new'),
     },
     {
       title: 'Schedule Job',
       description: 'Schedule a new service appointment',
-      action: () => console.log('Schedule job - not implemented yet'),
+      action: () => navigate('/scheduling'),
     },
     {
       title: 'View Today\'s Jobs',
       description: 'See all jobs scheduled for today',
-      action: () => console.log('View jobs - not implemented yet'),
+      action: () => navigate('/scheduling'),
     },
     {
       title: 'Generate Report',
       description: 'Create business analytics report',
-      action: () => console.log('Generate report - not implemented yet'),
+      action: () => navigate('/customers'),
     },
   ];
 

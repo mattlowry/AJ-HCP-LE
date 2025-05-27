@@ -36,6 +36,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/customers" element={<CustomerList />} />
+              <Route path="/customers/new" element={<CustomerDetail />} />
               <Route path="/customers/:id" element={<CustomerDetail />} />
               <Route path="/scheduling" element={<SchedulingCalendar />} />
             </Routes>
