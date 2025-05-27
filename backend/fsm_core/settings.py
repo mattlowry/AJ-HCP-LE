@@ -234,3 +234,13 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# CSRF settings for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://aj-long-electric.onrender.com',
+    'https://*.onrender.com',
+]
+
+# Session settings for production
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = not DEBUG
