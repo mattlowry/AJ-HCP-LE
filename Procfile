@@ -1,0 +1,1 @@
+web: python backend/manage.py migrate && python backend/manage.py collectstatic --noinput && gunicorn --pythonpath backend fsm_core.wsgi:application

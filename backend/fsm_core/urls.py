@@ -18,13 +18,25 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
+from django.views.static import serve
+import os
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('customers.urls')),
+    path('api/', include('customers.urls')),
     # Future app URLs will be added here
+    
+    # Serve React app
+    path('', TemplateView.as_view(template_name='index.html')),
 ]
 
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Serve React static files in production
+if not settings.DEBUG:
+    urlpatterns += [
+        path('static/<path:path>', serve, {'document_root': settings.STATIC_ROOT}),
+    ]

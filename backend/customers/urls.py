@@ -9,5 +9,5 @@ router.register(r'contacts', views.CustomerContactViewSet)
 router.register(r'reviews', views.CustomerReviewViewSet)
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]
