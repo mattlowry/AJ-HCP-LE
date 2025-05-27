@@ -25,44 +25,73 @@ import os
 
 def react_app_view(request):
     """Fallback view for React app"""
+    import os
+    from django.template.loader import get_template
+    
     try:
-        # Try to serve the React index.html
-        return TemplateView.as_view(template_name='index.html')(request)
-    except:
-        # Fallback HTML if React build not found
-        return HttpResponse("""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>AJ Long Electric - Field Service Management</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 50px; text-align: center; }
-                .container { max-width: 600px; margin: 0 auto; }
-                .status { background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🏗️ AJ Long Electric</h1>
-                <h2>Field Service Management System</h2>
-                <div class="status">
-                    <h3>✅ Backend is Running!</h3>
-                    <p>The Django API server is operational.</p>
-                    <p>Frontend is currently building...</p>
-                </div>
-                <h3>Available Services:</h3>
-                <ul style="text-align: left;">
-                    <li><a href="/admin/">Django Admin Interface</a></li>
-                    <li><a href="/api/customers/">Customer API</a></li>
-                    <li><a href="/api/properties/">Property API</a></li>
-                    <li><a href="/api/contacts/">Contact API</a></li>
-                    <li><a href="/api/reviews/">Review API</a></li>
-                </ul>
-                <p><small>React frontend will be available once the build completes.</small></p>
+        # Check if React build exists
+        react_index_path = os.path.join(settings.BASE_DIR.parent, 'frontend', 'build', 'index.html')
+        if os.path.exists(react_index_path):
+            # Serve React app
+            template = get_template('index.html')
+            return HttpResponse(template.render({}, request))
+    except Exception as e:
+        print(f"React template error: {e}")
+    
+    # Fallback HTML if React build not found
+    return HttpResponse("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AJ Long Electric - Field Service Management</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 50px; text-align: center; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .status { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50; }
+            .warning { background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+            .api-list { text-align: left; background: #f8f9fa; padding: 15px; border-radius: 5px; }
+            .api-list a { color: #007bff; text-decoration: none; font-weight: bold; }
+            .api-list a:hover { text-decoration: underline; }
+            .credentials { background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #17a2b8; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>⚡ AJ Long Electric</h1>
+            <h2>Field Service Management System</h2>
+            
+            <div class="status">
+                <h3>✅ Backend Server Online</h3>
+                <p>Django API server is running successfully!</p>
             </div>
-        </body>
-        </html>
-        """)
+            
+            <div class="warning">
+                <h3>🔧 Frontend Building</h3>
+                <p>React frontend is currently building. This page will automatically show the full application once ready.</p>
+            </div>
+            
+            <div class="credentials">
+                <h3>🔑 Admin Access</h3>
+                <p><strong>Username:</strong> admin</p>
+                <p><strong>Password:</strong> admin123</p>
+            </div>
+            
+            <h3>Available Services:</h3>
+            <div class="api-list">
+                <ul>
+                    <li><a href="/admin/">🛡️ Django Admin Interface</a></li>
+                    <li><a href="/api/customers/">👥 Customer API</a></li>
+                    <li><a href="/api/properties/">🏠 Property API</a></li>
+                    <li><a href="/api/contacts/">📞 Contact API</a></li>
+                    <li><a href="/api/reviews/">⭐ Review API</a></li>
+                </ul>
+            </div>
+            
+            <p><small>This system manages customer data, properties, scheduling, and billing for electrical services.</small></p>
+        </div>
+    </body>
+    </html>
+    """)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
