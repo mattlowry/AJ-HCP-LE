@@ -6,6 +6,7 @@ import { AppBar, Toolbar, Typography, Container } from '@mui/material';
 import Dashboard from './components/Dashboard';
 import CustomerList from './components/CustomerList';
 import CustomerDetail from './components/CustomerDetail';
+import SchedulingCalendar from './components/SchedulingCalendar';
 
 const theme = createTheme({
   palette: {
@@ -35,6 +36,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers" element={<CustomerList />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/scheduling" element={<SchedulingCalendar />} />
           </Routes>
         </Container>
       </Router>

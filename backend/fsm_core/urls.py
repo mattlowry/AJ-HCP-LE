@@ -84,6 +84,9 @@ def react_app_view(request):
                     <li><a href="/api/properties/">🏠 Property API</a></li>
                     <li><a href="/api/contacts/">📞 Contact API</a></li>
                     <li><a href="/api/reviews/">⭐ Review API</a></li>
+                    <li><a href="/jobs/api/jobs/">📋 Job Management API</a></li>
+                    <li><a href="/jobs/api/technicians/">🔧 Technician API</a></li>
+                    <li><a href="/jobs/api/emergency-calls/">🚨 Emergency Call API</a></li>
                 </ul>
             </div>
             
@@ -96,6 +99,7 @@ def react_app_view(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('customers.urls')),
+    path('jobs/', include('jobs.urls')),
     # Future app URLs will be added here
     
     # Serve React app with fallback
