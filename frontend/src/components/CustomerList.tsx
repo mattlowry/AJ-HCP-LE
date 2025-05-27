@@ -121,7 +121,7 @@ const CustomerList: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           {customers.map((customer) => (
-            <Grid item xs={12} sm={6} md={4} key={customer.id} component="div">
+            <Grid item xs={12} sm={6} md={4} key={customer.id}>
               <Card sx={{ height: '100%', cursor: 'pointer' }}>
                 <CardContent>
                   <Box display="flex" alignItems="center" mb={2}>

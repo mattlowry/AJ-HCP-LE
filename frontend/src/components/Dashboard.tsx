@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {statsCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index} component="div">
+          <Grid item xs={12} sm={6} md={3} key={index}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
       </Typography>
       <Grid container spacing={3}>
         {quickActions.map((action, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index} component="div">
+          <Grid item xs={12} sm={6} md={3} key={index}>
             <Card>
               <CardContent>
                 <Typography variant="h6" component="div" gutterBottom>

@@ -24,7 +24,7 @@ import {
   Add as AddIcon,
   Person as PersonIcon,
   Build as BuildIcon,
-  Emergency as EmergencyIcon,
+  LocalHospital as EmergencyIcon,
   Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import {

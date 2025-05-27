@@ -125,7 +125,7 @@ const CustomerDetail: React.FC = () => {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6} component="div">
+            <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>Contact Information</Typography>
               <Typography>📧 {customer.email}</Typography>
               <Typography>📞 {customer.phone}</Typography>
@@ -134,7 +134,7 @@ const CustomerDetail: React.FC = () => {
                 <Typography>🏢 {customer.company_name}</Typography>
               )}
             </Grid>
-            <Grid item xs={12} md={6} component="div">
+            <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>Summary</Typography>
               <Typography>
                 Properties: {customer.properties?.length || 0}
