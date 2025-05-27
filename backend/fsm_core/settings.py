@@ -26,7 +26,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-=c64+vjc%+&!1fl+fm&7)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,*.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
 
 
 # Application definition
@@ -157,6 +157,7 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React development server
     "http://127.0.0.1:3000",
+    "https://aj-long-electric.onrender.com",  # Production domain
 ]
 
 CORS_ALLOW_CREDENTIALS = True
