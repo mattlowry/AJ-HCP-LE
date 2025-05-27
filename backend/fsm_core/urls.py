@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
@@ -101,17 +101,21 @@ urlpatterns = [
     path('api/', include('customers.urls')),
     path('jobs/', include('jobs.urls')),
     # Future app URLs will be added here
-    
-    # Serve React app with fallback
-    path('', react_app_view),
 ]
+
+# Serve React static files
+react_build_path = os.path.join(settings.BASE_DIR.parent, 'frontend', 'build')
+if os.path.exists(react_build_path):
+    urlpatterns += [
+        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': os.path.join(react_build_path, 'static')}),
+        re_path(r'^(?!admin|api|jobs).*$', TemplateView.as_view(template_name='index.html')),
+    ]
+else:
+    # Fallback if React build not found
+    urlpatterns += [
+        path('', react_app_view),
+    ]
 
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-# Serve React static files in production
-if not settings.DEBUG:
-    urlpatterns += [
-        path('static/<path:path>', serve, {'document_root': settings.STATIC_ROOT}),
-    ]
