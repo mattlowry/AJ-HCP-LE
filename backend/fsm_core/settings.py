@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-=c64+vjc%+&!1fl+fm&7)ij6c3*6!it%i^waxwk9=j$ad3!mfx')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,aj-long-electric.onrender.com,*.onrender.com', cast=lambda v: [s.strip() for s in v.split(',')])
 
