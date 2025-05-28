@@ -86,8 +86,10 @@ const CustomerDetail: React.FC = () => {
         preferred_contact_method: 'email',
         notes: '',
       });
-    } else if (id) {
+    } else if (id && id !== 'new') {
       fetchCustomer(parseInt(id));
+    } else {
+      setLoading(false);
     }
   }, [id]);
 

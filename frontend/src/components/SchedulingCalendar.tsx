@@ -81,6 +81,15 @@ const SchedulingCalendar: React.FC = () => {
   const [openJobDialog, setOpenJobDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [activeJob, setActiveJob] = useState<Job | null>(null);
+  const [isCreatingJob, setIsCreatingJob] = useState(false);
+  const [newJobData, setNewJobData] = useState({
+    title: '',
+    customer_name: '',
+    service_type_name: '',
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'emergency',
+    estimated_duration: 2,
+    description: ''
+  });
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -257,6 +266,7 @@ const SchedulingCalendar: React.FC = () => {
         }}
         onClick={() => {
           setSelectedJob(job);
+          setIsCreatingJob(false);
           setOpenJobDialog(true);
         }}
       >
@@ -313,7 +323,19 @@ const SchedulingCalendar: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setOpenJobDialog(true)}
+          onClick={() => {
+            setIsCreatingJob(true);
+            setSelectedJob(null);
+            setNewJobData({
+              title: '',
+              customer_name: '',
+              service_type_name: '',
+              priority: 'normal',
+              estimated_duration: 2,
+              description: ''
+            });
+            setOpenJobDialog(true);
+          }}
         >
           Create Job
         </Button>
@@ -452,15 +474,85 @@ const SchedulingCalendar: React.FC = () => {
       {/* Job Details Dialog */}
       <Dialog
         open={openJobDialog}
-        onClose={() => setOpenJobDialog(false)}
+        onClose={() => {
+          setOpenJobDialog(false);
+          setIsCreatingJob(false);
+          setSelectedJob(null);
+        }}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          {selectedJob ? `Job Details: ${selectedJob.job_number}` : 'Create New Job'}
+          {isCreatingJob ? 'Create New Job' : selectedJob ? `Job Details: ${selectedJob.job_number}` : 'Job Details'}
         </DialogTitle>
         <DialogContent>
-          {selectedJob && (
+          {isCreatingJob ? (
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Job Title"
+                  value={newJobData.title}
+                  onChange={(e) => setNewJobData({...newJobData, title: e.target.value})}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Customer Name"
+                  value={newJobData.customer_name}
+                  onChange={(e) => setNewJobData({...newJobData, customer_name: e.target.value})}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Service Type"
+                  value={newJobData.service_type_name}
+                  onChange={(e) => setNewJobData({...newJobData, service_type_name: e.target.value})}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={newJobData.priority}
+                    label="Priority"
+                    onChange={(e) => setNewJobData({...newJobData, priority: e.target.value as any})}
+                  >
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="normal">Normal</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="emergency">Emergency</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Estimated Duration (hours)"
+                  type="number"
+                  value={newJobData.estimated_duration}
+                  onChange={(e) => setNewJobData({...newJobData, estimated_duration: parseInt(e.target.value) || 1})}
+                  inputProps={{ min: 0.5, max: 12, step: 0.5 }}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={4}
+                  value={newJobData.description}
+                  onChange={(e) => setNewJobData({...newJobData, description: e.target.value})}
+                />
+              </Grid>
+            </Grid>
+          ) : selectedJob ? (
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <Typography variant="h6">{selectedJob.title}</Typography>
@@ -503,15 +595,38 @@ const SchedulingCalendar: React.FC = () => {
                 </>
               )}
             </Grid>
-          )}
+          ) : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenJobDialog(false)}>Close</Button>
-          {selectedJob && (
+          <Button onClick={() => {
+            setOpenJobDialog(false);
+            setIsCreatingJob(false);
+            setSelectedJob(null);
+          }}>Cancel</Button>
+          {isCreatingJob ? (
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={async () => {
+                try {
+                  // Here you would normally call an API to create the job
+                  console.log('Creating job:', newJobData);
+                  alert('Job creation functionality not yet connected to backend API');
+                  setOpenJobDialog(false);
+                  setIsCreatingJob(false);
+                } catch (error) {
+                  console.error('Error creating job:', error);
+                }
+              }}
+              disabled={!newJobData.title || !newJobData.customer_name || !newJobData.service_type_name}
+            >
+              Create Job
+            </Button>
+          ) : selectedJob ? (
             <Button variant="contained" color="primary">
               Edit Job
             </Button>
-          )}
+          ) : null}
         </DialogActions>
       </Dialog>
     </Box>

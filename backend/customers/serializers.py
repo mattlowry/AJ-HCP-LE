@@ -56,7 +56,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     def get_last_job_date(self, obj):
         # This will be implemented when we create the jobs app
         return None
-
+11
 
 class CustomerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating customers with nested data"""
