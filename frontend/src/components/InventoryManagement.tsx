@@ -27,7 +27,6 @@ import {
   Edit as EditIcon,
   Visibility as ViewIcon,
   Warning as WarningIcon,
-  TrendingDown as TrendingDownIcon,
   Inventory as InventoryIcon,
   Search as SearchIcon,
   ShoppingCart as ShoppingCartIcon
@@ -228,10 +227,6 @@ const InventoryManagement: React.FC = () => {
     }
   ];
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -245,6 +240,10 @@ const InventoryManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const getStockStatus = (item: Item) => {
     if (item.current_stock <= item.reorder_point) return 'critical';

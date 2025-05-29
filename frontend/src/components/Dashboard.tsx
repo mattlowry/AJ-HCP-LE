@@ -5,7 +5,6 @@ import {
   CardContent,
   Typography,
   Box,
-  Button,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -15,6 +14,7 @@ import {
   Receipt as ReceiptIcon,
   Inventory as InventoryIcon,
   Analytics as AnalyticsIcon,
+  Engineering as EngineeringIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 

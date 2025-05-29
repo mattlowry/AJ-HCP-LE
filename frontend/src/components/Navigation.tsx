@@ -20,6 +20,7 @@ import {
   Receipt as ReceiptIcon,
   Inventory as InventoryIcon,
   Analytics as AnalyticsIcon,
+  Engineering as EngineeringIcon,
   Settings as SettingsIcon
 } from '@mui/icons-material';
 
@@ -41,6 +42,7 @@ const Navigation: React.FC<NavigationProps> = ({ open, onClose }) => {
     { text: 'Jobs', icon: <WorkIcon />, path: '/jobs' },
     { text: 'Billing', icon: <ReceiptIcon />, path: '/billing' },
     { text: 'Inventory', icon: <InventoryIcon />, path: '/inventory' },
+    { text: 'Technicians', icon: <EngineeringIcon />, path: '/technicians' },
     { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   ];
 

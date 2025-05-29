@@ -14,7 +14,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Fab,
   Table,
   TableBody,
   TableCell,
@@ -70,9 +69,6 @@ interface Technician {
 
 const JobList: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
-  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -144,10 +140,6 @@ const JobList: React.FC = () => {
     }
   ];
 
-  useEffect(() => {
-    loadJobs();
-  }, []);
-
   const loadJobs = async () => {
     try {
       setLoading(true);
@@ -159,6 +151,10 @@ const JobList: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

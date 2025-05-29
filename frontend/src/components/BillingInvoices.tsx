@@ -10,10 +10,6 @@ import {
   TextField,
   MenuItem,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +25,6 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Visibility as ViewIcon,
-  Delete as DeleteIcon,
   Search as SearchIcon,
   Receipt as ReceiptIcon,
   Send as SendIcon,
@@ -192,10 +187,6 @@ const BillingInvoices: React.FC = () => {
     }
   ];
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -209,6 +200,10 @@ const BillingInvoices: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

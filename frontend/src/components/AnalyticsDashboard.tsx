@@ -119,10 +119,6 @@ const AnalyticsDashboard: React.FC = () => {
     }
   ];
 
-  useEffect(() => {
-    loadAnalyticsData();
-  }, []);
-
   const loadAnalyticsData = async () => {
     try {
       setLoading(true);
@@ -136,6 +132,10 @@ const AnalyticsDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadAnalyticsData();
+  }, []);
 
   const getPerformanceColor = (value: number, threshold: number) => {
     if (value >= threshold) return 'success';

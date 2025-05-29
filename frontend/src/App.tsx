@@ -7,9 +7,7 @@ import {
   Toolbar, 
   Typography, 
   Box,
-  IconButton,
-  useMediaQuery,
-  useTheme
+  IconButton
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 
@@ -22,6 +20,7 @@ import JobList from './components/JobList';
 import BillingInvoices from './components/BillingInvoices';
 import InventoryManagement from './components/InventoryManagement';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import TechnicianManagement from './components/TechnicianManagement';
 
 const theme = createTheme({
   palette: {
@@ -38,8 +37,6 @@ const drawerWidth = 240;
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const muiTheme = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -98,6 +95,7 @@ function App() {
                 <Route path="/billing" element={<BillingInvoices />} />
                 <Route path="/inventory" element={<InventoryManagement />} />
                 <Route path="/analytics" element={<AnalyticsDashboard />} />
+                <Route path="/technicians" element={<TechnicianManagement />} />
               </Routes>
             </Box>
           </Box>
