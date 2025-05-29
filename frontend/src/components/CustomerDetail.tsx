@@ -67,6 +67,19 @@ const CustomerDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const fetchCustomer = React.useCallback(async (customerId: number) => {
+    try {
+      setLoading(true);
+      const response = await customerApi.getById(customerId);
+      setCustomer(response.data);
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+      navigate('/customers');
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
   useEffect(() => {
     if (id === 'new') {
       setIsCreating(true);
@@ -91,20 +104,7 @@ const CustomerDetail: React.FC = () => {
     } else {
       setLoading(false);
     }
-  }, [id]);
-
-  const fetchCustomer = async (customerId: number) => {
-    try {
-      setLoading(true);
-      const response = await customerApi.getById(customerId);
-      setCustomer(response.data);
-    } catch (error) {
-      console.error('Error fetching customer:', error);
-      navigate('/customers');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, fetchCustomer]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

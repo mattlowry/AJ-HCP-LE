@@ -70,6 +70,10 @@ class Property(models.Model):
     state = models.CharField(max_length=50)
     zip_code = models.CharField(max_length=10)
     
+    # Location coordinates (for routing optimization)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    
     # Property specifications
     square_footage = models.PositiveIntegerField(null=True, blank=True)
     year_built = models.PositiveIntegerField(null=True, blank=True)

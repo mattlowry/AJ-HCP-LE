@@ -100,6 +100,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('customers.urls')),
     path('jobs/', include('jobs.urls')),
+    path('scheduling/', include('scheduling.urls')),
+    path('billing/', include('billing.urls')),
+    path('inventory/', include('inventory.urls')),
+    path('analytics/', include('analytics.urls')),
     # Future app URLs will be added here
 ]
 

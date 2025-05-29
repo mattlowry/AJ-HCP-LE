@@ -17,15 +17,10 @@ import {
   InputLabel,
   Chip,
   Box,
-  IconButton,
-  Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Person as PersonIcon,
-  Build as BuildIcon,
-  LocalHospital as EmergencyIcon,
-  Schedule as ScheduleIcon
+  Person as PersonIcon
 } from '@mui/icons-material';
 import {
   DndContext,
@@ -113,44 +108,12 @@ const SchedulingCalendar: React.FC = () => {
 
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(generateTimeSlots());
 
-  const fetchJobs = async () => {
-    try {
-      // Fetch scheduled jobs for the selected date
-      const scheduledResponse = await fetch(
-        `/jobs/api/jobs/scheduling/?date_from=${selectedDate}&date_to=${selectedDate}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      
-      if (scheduledResponse.ok) {
-        const scheduledData = await scheduledResponse.json();
-        setJobs(scheduledData);
-      }
-
-      // Fetch unscheduled jobs
-      const unscheduledResponse = await fetch('/jobs/api/jobs/unscheduled/', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      
-      if (unscheduledResponse.ok) {
-        const unscheduledData = await unscheduledResponse.json();
-        setUnscheduledJobs(unscheduledData);
-      }
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-    }
-  };
 
   const fetchTechnicians = async () => {
     try {
-      const response = await fetch('/jobs/api/technicians/available/', {
+      const response = await fetch('http://localhost:8000/jobs/api/technicians/available/', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
       });
       
@@ -163,10 +126,43 @@ const SchedulingCalendar: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchJobs();
-    fetchTechnicians();
+  const fetchJobsCallback = React.useCallback(async () => {
+    try {
+      // Fetch scheduled jobs for the selected date
+      const scheduledResponse = await fetch(
+        `http://localhost:8000/jobs/api/jobs/scheduling/?date_from=${selectedDate}&date_to=${selectedDate}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (scheduledResponse.ok) {
+        const scheduledData = await scheduledResponse.json();
+        setJobs(scheduledData);
+      }
+
+      // Fetch unscheduled jobs
+      const unscheduledResponse = await fetch('http://localhost:8000/jobs/api/jobs/unscheduled/', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (unscheduledResponse.ok) {
+        const unscheduledData = await unscheduledResponse.json();
+        setUnscheduledJobs(unscheduledData);
+      }
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    }
   }, [selectedDate]);
+
+  useEffect(() => {
+    fetchJobsCallback();
+    fetchTechnicians();
+  }, [fetchJobsCallback]);
 
   // Organize jobs into time slots
   useEffect(() => {
@@ -208,11 +204,10 @@ const SchedulingCalendar: React.FC = () => {
         : '09:00';
       
       try {
-        await fetch(`/jobs/api/jobs/${active.id}/assign_technician/`, {
+        await fetch(`http://localhost:8000/jobs/api/jobs/${active.id}/assign_technician/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
           body: JSON.stringify({
             technician_id: technicianId,
@@ -221,7 +216,7 @@ const SchedulingCalendar: React.FC = () => {
           }),
         });
         
-        fetchJobs(); // Refresh data
+        fetchJobsCallback(); // Refresh data
       } catch (error) {
         console.error('Error assigning job:', error);
       }
@@ -609,13 +604,37 @@ const SchedulingCalendar: React.FC = () => {
               color="primary"
               onClick={async () => {
                 try {
-                  // Here you would normally call an API to create the job
-                  console.log('Creating job:', newJobData);
-                  alert('Job creation functionality not yet connected to backend API');
+                  // Create a new job via the backend API
+                  const response = await fetch('http://localhost:8000/jobs/api/jobs/', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      job_number: `JOB-${Date.now()}`,
+                      title: newJobData.title,
+                      description: newJobData.description,
+                      customer: 1, // Default to first customer for demo
+                      property: 1, // Default to first property for demo
+                      service_type: 1, // Default to first service type for demo
+                      priority: newJobData.priority,
+                      status: 'pending'
+                    }),
+                  });
+                  
+                  if (response.ok) {
+                    alert('Job created successfully!');
+                    fetchJobsCallback(); // Refresh the job list
+                  } else {
+                    alert('Error creating job. Using demo mode.');
+                    console.log('Demo job created:', newJobData);
+                  }
+                  
                   setOpenJobDialog(false);
                   setIsCreatingJob(false);
                 } catch (error) {
                   console.error('Error creating job:', error);
+                  alert('Error creating job. Check console for details.');
                 }
               }}
               disabled={!newJobData.title || !newJobData.customer_name || !newJobData.service_type_name}

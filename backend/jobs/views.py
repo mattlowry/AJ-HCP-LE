@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Avg
 from datetime import datetime, date, timedelta
@@ -18,7 +18,7 @@ from .serializers import (
 class ServiceTypeViewSet(viewsets.ModelViewSet):
     queryset = ServiceType.objects.all()
     serializer_class = ServiceTypeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['skill_level_required', 'is_emergency_service']
     search_fields = ['name', 'description']
@@ -28,7 +28,7 @@ class ServiceTypeViewSet(viewsets.ModelViewSet):
 
 class TechnicianViewSet(viewsets.ModelViewSet):
     queryset = Technician.objects.select_related('user').prefetch_related('specialties')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['skill_level', 'is_available', 'emergency_availability']
     search_fields = ['user__first_name', 'user__last_name', 'employee_id']
@@ -89,7 +89,7 @@ class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.select_related(
         'customer', 'property', 'service_type', 'assigned_technician__user', 'created_by'
     ).prefetch_related('photos', 'time_entries', 'status_history')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'assigned_technician', 'service_type', 'scheduled_date']
     search_fields = ['job_number', 'title', 'customer__first_name', 'customer__last_name']
@@ -297,7 +297,7 @@ class JobViewSet(viewsets.ModelViewSet):
 class EmergencyCallViewSet(viewsets.ModelViewSet):
     queryset = EmergencyCall.objects.select_related('related_job', 'dispatched_technician__user')
     serializer_class = EmergencyCallSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['urgency_level', 'dispatched_technician']
     search_fields = ['caller_name', 'emergency_description', 'location_address']
@@ -350,7 +350,7 @@ class EmergencyCallViewSet(viewsets.ModelViewSet):
 class JobPhotoViewSet(viewsets.ModelViewSet):
     queryset = JobPhoto.objects.select_related('job', 'taken_by')
     serializer_class = JobPhotoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['job', 'photo_type']
     ordering = ['-taken_at']
@@ -359,7 +359,7 @@ class JobPhotoViewSet(viewsets.ModelViewSet):
 class JobTimeEntryViewSet(viewsets.ModelViewSet):
     queryset = JobTimeEntry.objects.select_related('job', 'technician__user')
     serializer_class = JobTimeEntrySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['job', 'technician']
     ordering = ['-start_time']

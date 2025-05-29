@@ -29,11 +29,7 @@ const CustomerList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [customerType, setCustomerType] = useState('all');
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [search, customerType]);
-
-  const fetchCustomers = async () => {
+  const fetchCustomersCallback = React.useCallback(async () => {
     try {
       setLoading(true);
       const params: any = {};
@@ -44,12 +40,16 @@ const CustomerList: React.FC = () => {
       setCustomers(response.data.results || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
-      // In a real app, you'd show an error message to the user
       setCustomers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, customerType]);
+
+  useEffect(() => {
+    fetchCustomersCallback();
+  }, [fetchCustomersCallback]);
+
 
   const handleCustomerClick = (customerId: number) => {
     navigate(`/customers/${customerId}`);

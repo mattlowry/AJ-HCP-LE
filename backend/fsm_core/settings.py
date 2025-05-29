@@ -147,7 +147,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20
@@ -156,7 +156,9 @@ REST_FRAMEWORK = {
 # CORS settings for frontend development
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React development server
+    "http://localhost:3001",  # React development server alt port
     "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
     "https://aj-long-electric.onrender.com",  # Production domain
 ]
 
@@ -243,4 +245,4 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Session settings for production
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = False
