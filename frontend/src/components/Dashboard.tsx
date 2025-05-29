@@ -12,6 +12,9 @@ import {
   Work as WorkIcon,
   Schedule as ScheduleIcon,
   AttachMoney as MoneyIcon,
+  Receipt as ReceiptIcon,
+  Inventory as InventoryIcon,
+  Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -47,24 +50,40 @@ const Dashboard: React.FC = () => {
 
   const quickActions = [
     {
-      title: 'Add New Customer',
-      description: 'Create a new customer profile',
+      title: 'Manage Jobs',
+      description: 'View and manage all work orders',
+      icon: <WorkIcon sx={{ fontSize: 30 }} />,
+      action: () => navigate('/jobs'),
+    },
+    {
+      title: 'Schedule Calendar',
+      description: 'View scheduling calendar',
+      icon: <ScheduleIcon sx={{ fontSize: 30 }} />,
+      action: () => navigate('/scheduling'),
+    },
+    {
+      title: 'Billing & Invoices',
+      description: 'Manage invoices and payments',
+      icon: <ReceiptIcon sx={{ fontSize: 30 }} />,
+      action: () => navigate('/billing'),
+    },
+    {
+      title: 'Inventory',
+      description: 'Manage parts and supplies',
+      icon: <InventoryIcon sx={{ fontSize: 30 }} />,
+      action: () => navigate('/inventory'),
+    },
+    {
+      title: 'Analytics',
+      description: 'Business reports and insights',
+      icon: <AnalyticsIcon sx={{ fontSize: 30 }} />,
+      action: () => navigate('/analytics'),
+    },
+    {
+      title: 'Add Customer',
+      description: 'Create new customer profile',
+      icon: <PeopleIcon sx={{ fontSize: 30 }} />,
       action: () => navigate('/customers/new'),
-    },
-    {
-      title: 'Schedule Job',
-      description: 'Schedule a new service appointment',
-      action: () => navigate('/scheduling'),
-    },
-    {
-      title: 'View Today\'s Jobs',
-      description: 'See all jobs scheduled for today',
-      action: () => navigate('/scheduling'),
-    },
-    {
-      title: 'Generate Report',
-      description: 'Create business analytics report',
-      action: () => navigate('/customers'),
     },
   ];
 
@@ -105,22 +124,20 @@ const Dashboard: React.FC = () => {
       </Typography>
       <Grid container spacing={3}>
         {quickActions.map((action, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card>
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 6 } }} onClick={action.action}>
               <CardContent>
-                <Typography variant="h6" component="div" gutterBottom>
-                  {action.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <Box sx={{ color: '#1976d2', mr: 2 }}>
+                    {action.icon}
+                  </Box>
+                  <Typography variant="h6" component="div">
+                    {action.title}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
                   {action.description}
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  size="small"
-                  onClick={action.action}
-                >
-                  {action.title}
-                </Button>
               </CardContent>
             </Card>
           </Grid>
