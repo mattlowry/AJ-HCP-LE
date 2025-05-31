@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { billingApi } from '../services/api';
+import { validateForm, commonValidationRules, validationPatterns, formatCurrency } from '../utils/validation';
+import { Invoice, Estimate, Payment } from '../types/billing';
 import {
   Box,
   Typography,
@@ -33,7 +35,7 @@ import {
   Print as PrintIcon
 } from '@mui/icons-material';
 
-interface Invoice {
+interface LocalInvoice {
   id: number;
   invoice_number: string;
   customer_name: string;
@@ -50,7 +52,7 @@ interface Invoice {
   created_at: string;
 }
 
-interface Estimate {
+interface LocalEstimate {
   id: number;
   estimate_number: string;
   customer_name: string;
@@ -64,7 +66,7 @@ interface Estimate {
   created_at: string;
 }
 
-interface Payment {
+interface LocalPayment {
   id: number;
   reference_number: string;
   invoice_number: string;
@@ -77,16 +79,16 @@ interface Payment {
 
 const BillingInvoices: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [estimates, setEstimates] = useState<Estimate[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [invoices, setInvoices] = useState<LocalInvoice[]>([]);
+  const [estimates, setEstimates] = useState<LocalEstimate[]>([]);
+  const [payments, setPayments] = useState<LocalPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   // Demo data
-  const demoInvoices: Invoice[] = [
+  const demoInvoices: LocalInvoice[] = [
     {
       id: 1,
       invoice_number: 'INV-2024-0001',
@@ -137,7 +139,7 @@ const BillingInvoices: React.FC = () => {
     }
   ];
 
-  const demoEstimates: Estimate[] = [
+  const demoEstimates: LocalEstimate[] = [
     {
       id: 1,
       estimate_number: 'EST-2024-0001',
@@ -166,7 +168,7 @@ const BillingInvoices: React.FC = () => {
     }
   ];
 
-  const demoPayments: Payment[] = [
+  const demoPayments: LocalPayment[] = [
     {
       id: 1,
       reference_number: 'PAY-2024-0001',
@@ -194,7 +196,9 @@ const BillingInvoices: React.FC = () => {
       setLoading(true);
       setError('');
       
-      // Load real data from API
+      // For demo purposes, use demo data directly
+      // TODO: Uncomment API calls when backend is fully integrated
+      /*
       const [invoicesResponse, estimatesResponse, paymentsResponse] = await Promise.all([
         billingApi.getInvoices(),
         billingApi.getEstimates(),
@@ -204,6 +208,12 @@ const BillingInvoices: React.FC = () => {
       setInvoices(invoicesResponse.data.results);
       setEstimates(estimatesResponse.data.results);
       setPayments(paymentsResponse.data.results);
+      */
+      
+      // Using demo data
+      setInvoices(demoInvoices);
+      setEstimates(demoEstimates);
+      setPayments(demoPayments);
       setLoading(false);
     } catch (err) {
       console.error('Error loading billing data:', err);

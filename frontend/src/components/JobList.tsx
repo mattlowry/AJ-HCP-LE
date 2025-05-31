@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jobApi } from '../services/api';
 import { Job } from '../types/job';
+import { validateForm, commonValidationRules, formatCurrency } from '../utils/validation';
 import {
   Box,
   Typography,
@@ -108,7 +109,6 @@ const JobList: React.FC = () => {
       priority: 'high' as const,
       scheduled_date: '2024-01-15T09:00:00Z',
       scheduled_start: '2024-01-15T09:00:00Z',
-      assigned_technician: 'Mike Johnson',
       assigned_technicians: ['Mike Johnson'],
       description: 'Kitchen outlet not working - needs inspection',
       estimated_duration: 2,
@@ -131,7 +131,6 @@ const JobList: React.FC = () => {
       priority: 'medium' as const,
       scheduled_date: '2024-01-14T14:00:00Z',
       scheduled_start: '2024-01-14T14:00:00Z',
-      assigned_technician: 'Tom Wilson',
       assigned_technicians: ['Tom Wilson'],
       description: 'Install new 200A electrical panel',
       estimated_duration: 6,
@@ -154,7 +153,6 @@ const JobList: React.FC = () => {
       priority: 'emergency' as const,
       scheduled_date: '2024-01-12T16:00:00Z',
       scheduled_start: '2024-01-12T16:00:00Z',
-      assigned_technician: 'Mike Johnson',
       assigned_technicians: ['Mike Johnson'],
       description: 'Power outage in entire house',
       estimated_duration: 3,
@@ -177,7 +175,6 @@ const JobList: React.FC = () => {
       priority: 'low' as const,
       scheduled_date: '2024-01-18T11:00:00Z',
       scheduled_start: '2024-01-18T11:00:00Z',
-      assigned_technician: 'Tom Wilson',
       assigned_technicians: ['Tom Wilson'],
       description: 'Wire new garage workshop',
       estimated_duration: 8,
@@ -195,8 +192,16 @@ const JobList: React.FC = () => {
     try {
       setLoading(true);
       setError('');
+      
+      // For demo purposes, use demo data directly
+      // TODO: Uncomment API call when backend is fully integrated
+      /*
       const response = await jobApi.getAll();
       setJobs(response.data.results);
+      */
+      
+      // Using demo data
+      setJobs(demoJobs);
       setLoading(false);
     } catch (err) {
       console.error('Error loading jobs:', err);
@@ -297,21 +302,21 @@ const JobList: React.FC = () => {
     
     // Safely handle technician lookup
     let technicianId = '';
-    if (job.assigned_technician) {
-      technicianId = technicians.find(t => t.full_name === job.assigned_technician)?.id.toString() || '';
+    if (job.assigned_technicians && job.assigned_technicians.length > 0) {
+      technicianId = technicians.find(t => t.full_name === job.assigned_technicians![0])?.id.toString() || '';
     }
     
     setFormData({
       customer_id: customerId,
-      property_address: job.property_address,
+      property_address: job.property_address || '',
       service_type_id: serviceTypeId,
       status: job.status,
       priority: job.priority,
-      scheduled_date: new Date(job.scheduled_date),
+      scheduled_date: new Date(job.scheduled_start || job.created_at),
       assigned_technician_id: technicianId,
       description: job.description,
       estimated_duration: job.estimated_duration,
-      total_amount: job.total_amount,
+      total_amount: job.actual_cost || job.estimated_cost,
       notes: job.notes || ''
     });
     
@@ -346,64 +351,29 @@ const JobList: React.FC = () => {
     }
   };
   
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
+  const validateJobForm = () => {
+    const validationRules = {
+      customer_id: { required: true },
+      property_address: commonValidationRules.address,
+      service_type_id: { required: true },
+      description: commonValidationRules.description,
+      estimated_duration: commonValidationRules.duration,
+      total_amount: commonValidationRules.currency
+    };
     
-    if (!formData.customer_id) errors.customer_id = 'Customer is required';
-    if (!formData.property_address) errors.property_address = 'Property address is required';
-    if (!formData.service_type_id) errors.service_type_id = 'Service type is required';
-    if (!formData.description) errors.description = 'Description is required';
-    if (formData.estimated_duration <= 0) errors.estimated_duration = 'Duration must be greater than 0';
-    if (formData.total_amount < 0) errors.total_amount = 'Amount cannot be negative';
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    const result = validateForm(formData, validationRules);
+    setFormErrors(result.errors);
+    return result.isValid;
   };
   
   const handleSaveJob = async () => {
     try {
-      if (!validateForm()) return;
+      if (!validateJobForm()) return;
       setSubmitting(true);
       
-      // Find related objects by ID
-      const customer = customers.find(c => c.id.toString() === formData.customer_id);
-      const serviceType = serviceTypes.find(s => s.id.toString() === formData.service_type_id);
-      const technician = technicians.find(t => t.id.toString() === formData.assigned_technician_id);
+      // For demo purposes, just show a success message
+      alert('Job saved successfully! (Demo mode - not persisted)');
       
-      if (!customer || !serviceType) {
-        setError('Missing required relationship data');
-        return;
-      }
-      
-      const jobData = {
-        customer_name: customer.full_name,
-        property_address: formData.property_address,
-        service_type: serviceType.name,
-        status: formData.status,
-        priority: formData.priority,
-        scheduled_date: formData.scheduled_date.toISOString(),
-        assigned_technician: technician?.full_name || '',
-        description: formData.description,
-        estimated_duration: Number(formData.estimated_duration),
-        total_amount: Number(formData.total_amount),
-        notes: formData.notes
-      };
-      
-      if (editingJob) {
-        // Update existing job
-        setJobs(jobs.map(job => 
-          job.id === editingJob.id ? { ...job, ...jobData } : job
-        ));
-      } else {
-        // Create new job
-        const newJob: Job = {
-          id: Math.max(...jobs.map(j => j.id), 0) + 1,
-          job_number: `JOB-2024-${String(jobs.length + 1).padStart(4, '0')}`,
-          created_at: new Date().toISOString(),
-          ...jobData
-        };
-        setJobs([...jobs, newJob]);
-      }
       setOpenDialog(false);
       setSubmitting(false);
     } catch (err) {
@@ -583,14 +553,14 @@ const JobList: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {(job.scheduled_date || job.scheduled_start) ? 
-                    new Date(job.scheduled_date || job.scheduled_start).toLocaleDateString() + ' ' +
-                    new Date(job.scheduled_date || job.scheduled_start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                  {job.scheduled_start ? 
+                    new Date(job.scheduled_start).toLocaleDateString() + ' ' +
+                    new Date(job.scheduled_start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     : 'Not scheduled'
                   }
                 </TableCell>
-                <TableCell>{job.assigned_technician || (job.assigned_technicians && job.assigned_technicians.length > 0 ? job.assigned_technicians.join(', ') : 'Unassigned')}</TableCell>
-                <TableCell>${(job.total_amount || job.estimated_cost || 0).toFixed(2)}</TableCell>
+                <TableCell>{(job.assigned_technicians && job.assigned_technicians.length > 0 ? job.assigned_technicians.join(', ') : 'Unassigned')}</TableCell>
+                <TableCell>${(job.actual_cost || job.estimated_cost || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   <Box display="flex" gap={1}>
                     <IconButton

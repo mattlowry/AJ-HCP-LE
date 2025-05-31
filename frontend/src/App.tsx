@@ -1,17 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Box,
-  IconButton
-} from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
-
-import Navigation from './components/Navigation';
+import { AuthProvider } from './contexts/AuthContext';
 import Dashboard from './components/Dashboard';
 import CustomerList from './components/CustomerList';
 import CustomerDetail from './components/CustomerDetail';
@@ -21,6 +12,12 @@ import BillingInvoices from './components/BillingInvoices';
 import InventoryManagement from './components/InventoryManagement';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TechnicianManagement from './components/TechnicianManagement';
+import ValidationDemo from './components/ValidationDemo';
+import Login from './components/Login';
+import UserRegistration from './components/UserRegistration';
+import UserProfile from './components/UserProfile';
+import ProtectedRoute from './components/ProtectedRoute';
+import MainLayout from './components/MainLayout';
 
 const theme = createTheme({
   palette: {
@@ -33,73 +30,77 @@ const theme = createTheme({
   },
 });
 
-const drawerWidth = 240;
-
 function App() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
 
   try {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
-          <Box sx={{ display: 'flex' }}>
-            <AppBar
-              position="fixed"
-              sx={{
-                width: { sm: `calc(100% - ${drawerWidth}px)` },
-                ml: { sm: `${drawerWidth}px` },
-              }}
-            >
-              <Toolbar>
-                <IconButton
-                  color="inherit"
-                  aria-label="open drawer"
-                  edge="start"
-                  onClick={handleDrawerToggle}
-                  sx={{ mr: 2, display: { sm: 'none' } }}
-                >
-                  <MenuIcon />
-                </IconButton>
-                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                  AJ Long Electric - Field Service Management
-                </Typography>
-              </Toolbar>
-            </AppBar>
-
-            <Navigation 
-              open={mobileOpen} 
-              onClose={handleDrawerToggle}
-            />
-
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                p: 3,
-                width: { sm: `calc(100% - ${drawerWidth}px)` },
-              }}
-            >
-              <Toolbar />
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/customers" element={<CustomerList />} />
-                <Route path="/customers/new" element={<CustomerDetail />} />
-                <Route path="/customers/:id" element={<CustomerDetail />} />
-                <Route path="/scheduling" element={<SchedulingCalendar />} />
-                <Route path="/jobs" element={<JobList />} />
-                <Route path="/billing" element={<BillingInvoices />} />
-                <Route path="/inventory" element={<InventoryManagement />} />
-                <Route path="/analytics" element={<AnalyticsDashboard />} />
-                <Route path="/technicians" element={<TechnicianManagement />} />
-              </Routes>
-            </Box>
-          </Box>
-        </Router>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<UserRegistration />} />
+              
+              {/* Protected Routes with Main Layout */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="customers" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                    <CustomerList />
+                  </ProtectedRoute>
+                } />
+                <Route path="customers/new" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <CustomerDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="customers/:id" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                    <CustomerDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="scheduling" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                    <SchedulingCalendar />
+                  </ProtectedRoute>
+                } />
+                <Route path="jobs" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                    <JobList />
+                  </ProtectedRoute>
+                } />
+                <Route path="billing" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <BillingInvoices />
+                  </ProtectedRoute>
+                } />
+                <Route path="inventory" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                    <InventoryManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="analytics" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <AnalyticsDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="technicians" element={
+                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                    <TechnicianManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="validation-demo" element={<ValidationDemo />} />
+                <Route path="profile" element={<UserProfile />} />
+              </Route>
+            </Routes>
+          </Router>
+        </AuthProvider>
       </ThemeProvider>
     );
   } catch (error) {

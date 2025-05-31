@@ -129,6 +129,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Phone number settings
+PHONENUMBER_DEFAULT_REGION = 'US'
+PHONENUMBER_DEFAULT_FORMAT = 'E164'
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

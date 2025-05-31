@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import Customer, Property, CustomerContact, CustomerReview
+import phonenumbers
+from phonenumbers import PhoneNumberFormat
 
 
 class CustomerContactSerializer(serializers.ModelSerializer):
@@ -31,11 +33,34 @@ class CustomerSerializer(serializers.ModelSerializer):
     properties = PropertySerializer(many=True, read_only=True)
     contacts = CustomerContactSerializer(many=True, read_only=True)
     reviews = CustomerReviewSerializer(many=True, read_only=True)
+    phone = serializers.CharField()
     
     class Meta:
         model = Customer
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at')
+    
+    def validate_phone(self, value):
+        """Custom phone validation that's more lenient"""
+        try:
+            # Try to parse as US number if no country code
+            if not value.startswith('+'):
+                # Remove any formatting and add US country code
+                cleaned = ''.join(filter(str.isdigit, value))
+                if len(cleaned) == 10:
+                    value = f'+1{cleaned}'
+                elif len(cleaned) == 11 and cleaned.startswith('1'):
+                    value = f'+{cleaned}'
+            
+            # Parse and validate
+            parsed = phonenumbers.parse(value, 'US')
+            if phonenumbers.is_valid_number(parsed):
+                return phonenumbers.format_number(parsed, PhoneNumberFormat.E164)
+            else:
+                raise serializers.ValidationError("Invalid phone number format")
+        except phonenumbers.NumberParseException:
+            raise serializers.ValidationError("Invalid phone number format")
+        return value
 
 
 class CustomerListSerializer(serializers.ModelSerializer):
@@ -62,11 +87,34 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating customers with nested data"""
     properties = PropertySerializer(many=True, required=False)
     contacts = CustomerContactSerializer(many=True, required=False)
+    phone = serializers.CharField()
     
     class Meta:
         model = Customer
         fields = '__all__'
         read_only_fields = ('created_at', 'updated_at')
+    
+    def validate_phone(self, value):
+        """Custom phone validation that's more lenient"""
+        try:
+            # Try to parse as US number if no country code
+            if not value.startswith('+'):
+                # Remove any formatting and add US country code
+                cleaned = ''.join(filter(str.isdigit, value))
+                if len(cleaned) == 10:
+                    value = f'+1{cleaned}'
+                elif len(cleaned) == 11 and cleaned.startswith('1'):
+                    value = f'+{cleaned}'
+            
+            # Parse and validate
+            parsed = phonenumbers.parse(value, 'US')
+            if phonenumbers.is_valid_number(parsed):
+                return phonenumbers.format_number(parsed, PhoneNumberFormat.E164)
+            else:
+                raise serializers.ValidationError("Invalid phone number format")
+        except phonenumbers.NumberParseException:
+            raise serializers.ValidationError("Invalid phone number format")
+        return value
     
     def create(self, validated_data):
         properties_data = validated_data.pop('properties', [])
