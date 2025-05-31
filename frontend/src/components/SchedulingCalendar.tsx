@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { jobApi, technicianApi, customerApi } from '../services/api';
+import { jobApi, technicianApi, customerApi, inventoryApi } from '../services/api';
 import { validateForm, commonValidationRules } from '../utils/validation';
+import { Item, Category } from '../types/inventory';
 import {
   Card,
   CardContent,
@@ -36,7 +37,12 @@ import {
   ChevronRight as ChevronRightIcon,
   AccessTime as TimeIcon,
   Delete as DeleteIcon,
-  AddShoppingCart as AddItemIcon
+  AddShoppingCart as AddItemIcon,
+  Inventory as InventoryIcon,
+  Email as EmailIcon,
+  Assignment as DocumentIcon,
+  CheckCircle as ApproveIcon,
+  Cancel as RejectIcon
 } from '@mui/icons-material';
 import {
   DndContext,
@@ -61,6 +67,7 @@ interface Job {
   title: string;
   customer_name: string;
   status: 'pending' | 'scheduled' | 'on_the_way' | 'in_progress' | 'completed' | 'cancelled';
+  estimate_status?: 'draft' | 'sent' | 'viewed' | 'approved' | 'rejected' | 'expired';
   priority: 'low' | 'medium' | 'high' | 'emergency';
   scheduled_date: string | null;
   scheduled_start_time: string | null;
@@ -136,9 +143,21 @@ const SchedulingCalendar: React.FC = () => {
     type: 'labor' as 'labor' | 'material' | 'service'
   });
   
+  const [showMaterialsCatalog, setShowMaterialsCatalog] = useState(false);
+  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
+  const [selectedMaterialQuantity, setSelectedMaterialQuantity] = useState<Record<string, number>>({});
+  
+  // Inventory-related state
+  const [inventoryItems, setInventoryItems] = useState<Item[]>([]);
+  const [inventoryCategories, setInventoryCategories] = useState<Category[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState<Item[]>([]);
+  
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [availableCustomers, setAvailableCustomers] = useState<any[]>([]);
+  const [selectedCustomerProperties, setSelectedCustomerProperties] = useState<any[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [newCustomerData, setNewCustomerData] = useState({
     first_name: '',
     last_name: '',
@@ -217,6 +236,37 @@ const SchedulingCalendar: React.FC = () => {
       ];
       
       setTechnicians(demoTechnicians);
+    }
+  };
+
+  // Fetch inventory items for materials catalog
+  const fetchInventoryItems = async () => {
+    try {
+      setInventoryLoading(true);
+      setError(null);
+      
+      const itemsResponse = await inventoryApi.getItems({ is_active: true });
+      const categoriesResponse = await inventoryApi.getCategories();
+      
+      setInventoryItems(itemsResponse.data.results);
+      setInventoryCategories(categoriesResponse.data);
+      
+      // Identify low stock items
+      const lowStock = itemsResponse.data.results.filter(
+        item => item.current_stock <= item.minimum_stock
+      );
+      setLowStockItems(lowStock);
+      
+    } catch (error) {
+      console.error('Error fetching inventory:', error);
+      setError('Failed to load inventory. Using fallback materials catalog.');
+      
+      // Keep existing static materials as fallback
+      setInventoryItems([]);
+      setInventoryCategories([]);
+      setLowStockItems([]);
+    } finally {
+      setInventoryLoading(false);
     }
   };
 
@@ -322,7 +372,8 @@ const SchedulingCalendar: React.FC = () => {
               estimated_duration: 1.5,
               service_type_name: "Electrical Repair",
               job_type: "estimate" as const,
-              estimated_cost: 250
+              estimated_cost: 250,
+              estimate_status: "sent" as const
             },
             {
               id: "103",
@@ -469,7 +520,8 @@ const SchedulingCalendar: React.FC = () => {
               estimated_duration: 1,
               service_type_name: "Electrical Repair",
               job_type: "estimate" as const,
-              estimated_cost: 350
+              estimated_cost: 350,
+              estimate_status: "viewed" as const
             },
             {
               id: "203",
@@ -485,7 +537,8 @@ const SchedulingCalendar: React.FC = () => {
               estimated_duration: 5,
               service_type_name: "Wiring Installation",
               job_type: "estimate" as const,
-              estimated_cost: 1200
+              estimated_cost: 1200,
+              estimate_status: "draft" as const
             },
             {
               id: "204",
@@ -515,6 +568,7 @@ const SchedulingCalendar: React.FC = () => {
   useEffect(() => {
     fetchJobsCallback();
     fetchTechnicians();
+    fetchInventoryItems();
   }, [fetchJobsCallback]);
 
   // Organize jobs into time slots
@@ -670,6 +724,30 @@ const SchedulingCalendar: React.FC = () => {
     return jobType === 'estimate' ? '📋' : '🔧';
   };
 
+  const getEstimateStatusColor = (status?: Job['estimate_status']) => {
+    switch (status) {
+      case 'draft': return '#9e9e9e';
+      case 'sent': return '#2196f3';
+      case 'viewed': return '#ff9800';
+      case 'approved': return '#4caf50';
+      case 'rejected': return '#f44336';
+      case 'expired': return '#795548';
+      default: return '#e0e0e0';
+    }
+  };
+
+  const getEstimateStatusText = (status?: Job['estimate_status']) => {
+    switch (status) {
+      case 'draft': return 'Draft';
+      case 'sent': return 'Sent';
+      case 'viewed': return 'Viewed';
+      case 'approved': return 'Approved';
+      case 'rejected': return 'Rejected';
+      case 'expired': return 'Expired';
+      default: return 'Draft';
+    }
+  };
+
   const getJobTypeBorder = (jobType?: 'job' | 'estimate') => {
     return jobType === 'estimate' ? '2px dashed' : '2px solid';
   };
@@ -786,10 +864,10 @@ const SchedulingCalendar: React.FC = () => {
             </Typography>
             {job.job_type === 'estimate' && (
               <Chip
-                label="EST"
+                label={getEstimateStatusText(job.estimate_status)}
                 size="small"
                 sx={{
-                  backgroundColor: '#ff9800',
+                  backgroundColor: getEstimateStatusColor(job.estimate_status),
                   color: 'white',
                   fontSize: '0.6rem',
                   height: 16
@@ -1038,7 +1116,7 @@ const SchedulingCalendar: React.FC = () => {
     }
   };
 
-  const handleCustomerSelect = (customer: any) => {
+  const handleCustomerSelect = async (customer: any) => {
     setNewJobData({
       ...newJobData,
       customer_id: customer.id,
@@ -1046,6 +1124,48 @@ const SchedulingCalendar: React.FC = () => {
     });
     setCustomerSearchQuery(customer.full_name);
     setShowCustomerForm(false);
+    
+    // Fetch customer properties
+    await fetchCustomerProperties(customer.id);
+  };
+
+  const fetchCustomerProperties = async (customerId: number) => {
+    try {
+      const response = await customerApi.getProperties(customerId);
+      setSelectedCustomerProperties(response.data || []);
+      
+      // Auto-select if only one property
+      if (response.data && response.data.length === 1) {
+        setSelectedPropertyId(response.data[0].id);
+      } else {
+        setSelectedPropertyId(null);
+      }
+    } catch (error) {
+      console.error('Error fetching customer properties:', error);
+      // Fallback to demo properties
+      const demoProperties = [
+        {
+          id: 1,
+          property_type: 'single_family',
+          street_address: '123 Main St',
+          city: 'Springfield',
+          state: 'IL',
+          zip_code: '62701',
+          full_address: '123 Main St, Springfield, IL 62701'
+        },
+        {
+          id: 2,
+          property_type: 'commercial',
+          street_address: '456 Business Ave',
+          city: 'Springfield',
+          state: 'IL',
+          zip_code: '62702',
+          full_address: '456 Business Ave, Springfield, IL 62702'
+        }
+      ];
+      setSelectedCustomerProperties(demoProperties);
+      setSelectedPropertyId(null);
+    }
   };
 
   const handleCreateNewCustomer = async () => {
@@ -1105,6 +1225,11 @@ const SchedulingCalendar: React.FC = () => {
     });
     setCustomerSearchQuery('');
     setShowCustomerForm(false);
+    setShowMaterialsCatalog(false);
+    setMaterialSearchQuery('');
+    setSelectedMaterialQuantity({});
+    setSelectedCustomerProperties([]);
+    setSelectedPropertyId(null);
   };
 
   // Line item management functions
@@ -1157,6 +1282,537 @@ const SchedulingCalendar: React.FC = () => {
   React.useEffect(() => {
     calculateEstimateTotals(lineItems);
   }, [newJobData.tax_rate]);
+
+  // Fallback materials catalog (used when inventory API is unavailable)
+  const fallbackMaterialsCatalog = [
+    // ===================
+    // CIRCUIT BREAKERS - SQUARE D / SCHNEIDER ELECTRIC
+    // ===================
+    { id: 'sqd-qo115', name: 'Square D QO 15A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 14.98, unit: 'each' },
+    { id: 'sqd-qo120', name: 'Square D QO 20A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 16.47, unit: 'each' },
+    { id: 'sqd-qo130', name: 'Square D QO 30A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 22.98, unit: 'each' },
+    { id: 'sqd-qo240', name: 'Square D QO 40A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 45.97, unit: 'each' },
+    { id: 'sqd-qo250', name: 'Square D QO 50A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 58.76, unit: 'each' },
+    { id: 'sqd-qo2100', name: 'Square D QO 100A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
+    { id: 'sqd-qo120gfi', name: 'Square D QO 20A GFCI Breaker', category: 'Circuit Breakers - Square D', price: 89.97, unit: 'each' },
+    { id: 'sqd-qo115af', name: 'Square D QO 15A AFCI Breaker', category: 'Circuit Breakers - Square D', price: 75.98, unit: 'each' },
+    { id: 'sqd-qo120df', name: 'Square D QO 20A Dual Function AFCI/GFCI', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
+    
+    // ===================
+    // CIRCUIT BREAKERS - SIEMENS
+    // ===================
+    { id: 'sie-q115', name: 'Siemens Q115 15A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 12.48, unit: 'each' },
+    { id: 'sie-q120', name: 'Siemens Q120 20A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 13.97, unit: 'each' },
+    { id: 'sie-q130', name: 'Siemens Q130 30A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 19.98, unit: 'each' },
+    { id: 'sie-q240', name: 'Siemens Q240 40A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 39.97, unit: 'each' },
+    { id: 'sie-q250', name: 'Siemens Q250 50A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 52.76, unit: 'each' },
+    { id: 'sie-q120gfci', name: 'Siemens Q120GFCI 20A GFCI Breaker', category: 'Circuit Breakers - Siemens', price: 79.97, unit: 'each' },
+    { id: 'sie-q115af', name: 'Siemens Q115AF 15A AFCI Breaker', category: 'Circuit Breakers - Siemens', price: 69.98, unit: 'each' },
+
+    // ===================
+    // CIRCUIT BREAKERS - GENERAL ELECTRIC (GE)
+    // ===================
+    { id: 'ge-thql115', name: 'GE THQL115 15A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 11.98, unit: 'each' },
+    { id: 'ge-thql120', name: 'GE THQL120 20A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 13.47, unit: 'each' },
+    { id: 'ge-thql130', name: 'GE THQL130 30A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 18.98, unit: 'each' },
+    { id: 'ge-thql240', name: 'GE THQL240 40A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 37.97, unit: 'each' },
+    { id: 'ge-thql250', name: 'GE THQL250 50A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 49.76, unit: 'each' },
+    { id: 'ge-thql1120gf', name: 'GE THQL1120GF 20A GFCI Breaker', category: 'Circuit Breakers - GE', price: 77.97, unit: 'each' },
+
+    // ===================
+    // CIRCUIT BREAKERS - EATON
+    // ===================
+    { id: 'eat-br115', name: 'Eaton BR115 15A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 10.98, unit: 'each' },
+    { id: 'eat-br120', name: 'Eaton BR120 20A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 12.47, unit: 'each' },
+    { id: 'eat-br130', name: 'Eaton BR130 30A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 17.98, unit: 'each' },
+    { id: 'eat-br240', name: 'Eaton BR240 40A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 35.97, unit: 'each' },
+    { id: 'eat-br250', name: 'Eaton BR250 50A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 47.76, unit: 'each' },
+    { id: 'eat-brgf120', name: 'Eaton BRGF120 20A GFCI Breaker', category: 'Circuit Breakers - Eaton', price: 75.97, unit: 'each' },
+
+    // ===================
+    // WIRE & CABLE - ROMEX
+    // ===================
+    { id: 'romex-14-2-wg', name: '14-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 0.89, unit: 'foot' },
+    { id: 'romex-14-3-wg', name: '14-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.29, unit: 'foot' },
+    { id: 'romex-12-2-wg', name: '12-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.39, unit: 'foot' },
+    { id: 'romex-12-3-wg', name: '12-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.89, unit: 'foot' },
+    { id: 'romex-10-2-wg', name: '10-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 2.49, unit: 'foot' },
+    { id: 'romex-10-3-wg', name: '10-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.29, unit: 'foot' },
+    { id: 'romex-8-2-wg', name: '8-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.89, unit: 'foot' },
+    { id: 'romex-8-3-wg', name: '8-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 4.89, unit: 'foot' },
+    { id: 'romex-6-2-wg', name: '6-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 5.89, unit: 'foot' },
+    { id: 'romex-6-3-wg', name: '6-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 7.29, unit: 'foot' },
+
+    // ===================
+    // WIRE & CABLE - THHN/THWN
+    // ===================
+    { id: 'thhn-14-black', name: '14 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+    { id: 'thhn-14-white', name: '14 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+    { id: 'thhn-14-red', name: '14 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+    { id: 'thhn-12-black', name: '12 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+    { id: 'thhn-12-white', name: '12 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+    { id: 'thhn-12-red', name: '12 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+    { id: 'thhn-10-black', name: '10 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
+    { id: 'thhn-10-white', name: '10 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
+    { id: 'thhn-8-black', name: '8 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 1.45, unit: 'foot' },
+    { id: 'thhn-6-black', name: '6 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 2.15, unit: 'foot' },
+
+    // ===================
+    // OUTLETS & RECEPTACLES
+    // ===================
+    { id: 'rec-15a-std', name: '15A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 1.48, unit: 'each' },
+    { id: 'rec-20a-std', name: '20A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 2.98, unit: 'each' },
+    { id: 'rec-15a-gfci', name: '15A GFCI Receptacle', category: 'Outlets & Receptacles', price: 18.97, unit: 'each' },
+    { id: 'rec-20a-gfci', name: '20A GFCI Receptacle', category: 'Outlets & Receptacles', price: 22.97, unit: 'each' },
+    { id: 'rec-15a-usb', name: '15A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 24.98, unit: 'each' },
+    { id: 'rec-15a-usbc', name: '15A USB-C Duplex Receptacle', category: 'Outlets & Receptacles', price: 34.98, unit: 'each' },
+    { id: 'rec-20a-usb', name: '20A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 29.98, unit: 'each' },
+    { id: 'rec-gfci-usb', name: '20A GFCI with USB Charging', category: 'Outlets & Receptacles', price: 39.97, unit: 'each' },
+    { id: 'rec-smartwifi', name: 'Smart WiFi GFCI Receptacle', category: 'Outlets & Receptacles', price: 49.98, unit: 'each' },
+    { id: 'rec-weatherproof', name: 'Weatherproof GFCI Receptacle', category: 'Outlets & Receptacles', price: 26.98, unit: 'each' },
+
+    // ===================
+    // SWITCHES
+    // ===================
+    { id: 'sw-single-toggle', name: 'Single Pole Toggle Switch', category: 'Switches', price: 1.98, unit: 'each' },
+    { id: 'sw-single-decora', name: 'Single Pole Decora Switch', category: 'Switches', price: 3.48, unit: 'each' },
+    { id: 'sw-3way-toggle', name: '3-Way Toggle Switch', category: 'Switches', price: 3.98, unit: 'each' },
+    { id: 'sw-3way-decora', name: '3-Way Decora Switch', category: 'Switches', price: 5.48, unit: 'each' },
+    { id: 'sw-4way-toggle', name: '4-Way Toggle Switch', category: 'Switches', price: 12.98, unit: 'each' },
+    { id: 'sw-dimmer-led', name: 'LED Dimmer Switch', category: 'Switches', price: 24.98, unit: 'each' },
+    { id: 'sw-dimmer-3way', name: '3-Way LED Dimmer Switch', category: 'Switches', price: 34.98, unit: 'each' },
+    { id: 'sw-smart-wifi', name: 'Smart WiFi Switch', category: 'Switches', price: 19.98, unit: 'each' },
+    { id: 'sw-smart-dimmer', name: 'Smart WiFi Dimmer Switch', category: 'Switches', price: 39.98, unit: 'each' },
+    { id: 'sw-motion-sensor', name: 'Motion Sensor Switch', category: 'Switches', price: 29.98, unit: 'each' },
+    { id: 'sw-timer', name: 'Programmable Timer Switch', category: 'Switches', price: 22.98, unit: 'each' },
+
+    // ===================
+    // ELECTRICAL BOXES
+    // ===================
+    { id: 'box-1gang-pvc', name: 'Single Gang PVC Old Work Box', category: 'Electrical Boxes', price: 1.48, unit: 'each' },
+    { id: 'box-2gang-pvc', name: 'Double Gang PVC Old Work Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
+    { id: 'box-3gang-pvc', name: 'Triple Gang PVC Old Work Box', category: 'Electrical Boxes', price: 4.98, unit: 'each' },
+    { id: 'box-1gang-metal', name: 'Single Gang Metal Box', category: 'Electrical Boxes', price: 2.48, unit: 'each' },
+    { id: 'box-2gang-metal', name: 'Double Gang Metal Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
+    { id: 'box-ceiling-pvc', name: 'Ceiling Fan PVC Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
+    { id: 'box-ceiling-metal', name: 'Ceiling Fan Metal Box', category: 'Electrical Boxes', price: 5.98, unit: 'each' },
+    { id: 'box-4x4-sq', name: '4" x 4" Square Junction Box', category: 'Electrical Boxes', price: 3.48, unit: 'each' },
+    { id: 'box-4x4-oct', name: '4" Octagon Ceiling Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
+    { id: 'box-weatherproof', name: 'Weatherproof Outdoor Box', category: 'Electrical Boxes', price: 8.98, unit: 'each' },
+
+    // ===================
+    // CONDUIT & FITTINGS
+    // ===================
+    { id: 'conduit-emt-12', name: '1/2" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
+    { id: 'conduit-emt-34', name: '3/4" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
+    { id: 'conduit-emt-1', name: '1" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 6.98, unit: 'foot' },
+    { id: 'conduit-pvc-12', name: '1/2" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 2.48, unit: 'foot' },
+    { id: 'conduit-pvc-34', name: '3/4" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
+    { id: 'conduit-pvc-1', name: '1" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
+    { id: 'fitting-emt-conn-12', name: '1/2" EMT Connector', category: 'Conduit & Fittings', price: 1.98, unit: 'each' },
+    { id: 'fitting-emt-conn-34', name: '3/4" EMT Connector', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
+    { id: 'fitting-emt-coup-12', name: '1/2" EMT Coupling', category: 'Conduit & Fittings', price: 1.48, unit: 'each' },
+    { id: 'fitting-90-12', name: '1/2" 90° EMT Elbow', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
+
+    // ===================
+    // ELECTRICAL PANELS
+    // ===================
+    { id: 'panel-sqd-qo120', name: 'Square D QO 20-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 189.00, unit: 'each' },
+    { id: 'panel-sqd-qo140', name: 'Square D QO 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 298.00, unit: 'each' },
+    { id: 'panel-sqd-qo200', name: 'Square D QO 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 445.00, unit: 'each' },
+    { id: 'panel-sie-s2040', name: 'Siemens 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 185.00, unit: 'each' },
+    { id: 'panel-sie-200a', name: 'Siemens 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 425.00, unit: 'each' },
+    { id: 'panel-ge-load', name: 'GE PowerMark 40-Circuit Load Center', category: 'Electrical Panels', price: 175.00, unit: 'each' },
+    { id: 'subpanel-100a', name: '100A Sub Panel Load Center', category: 'Electrical Panels', price: 125.00, unit: 'each' },
+
+    // ===================
+    // LIGHTING & FIXTURES
+    // ===================
+    { id: 'led-recessed-4', name: '4" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 12.98, unit: 'each' },
+    { id: 'led-recessed-6', name: '6" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 18.98, unit: 'each' },
+    { id: 'led-recessed-adj', name: '6" LED Adjustable Recessed Light', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
+    { id: 'fixture-flush-led', name: 'LED Flush Mount Ceiling Light', category: 'Lighting & Fixtures', price: 39.98, unit: 'each' },
+    { id: 'fixture-pendant', name: 'Mini Pendant Light Fixture', category: 'Lighting & Fixtures', price: 29.98, unit: 'each' },
+    { id: 'fixture-chandelier', name: 'Traditional Chandelier 5-Light', category: 'Lighting & Fixtures', price: 129.00, unit: 'each' },
+    { id: 'fixture-vanity', name: '3-Light Vanity Bar Fixture', category: 'Lighting & Fixtures', price: 59.98, unit: 'each' },
+    { id: 'fixture-outdoor', name: 'Outdoor Wall Lantern', category: 'Lighting & Fixtures', price: 34.98, unit: 'each' },
+    { id: 'under-cabinet-led', name: 'Under Cabinet LED Light Strip', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
+
+    // ===================
+    // SPECIALTY & SAFETY
+    // ===================
+    { id: 'smoke-detector-battery', name: 'Battery Smoke Detector', category: 'Specialty & Safety', price: 14.98, unit: 'each' },
+    { id: 'smoke-detector-hardwired', name: 'Hardwired Smoke Detector', category: 'Specialty & Safety', price: 22.98, unit: 'each' },
+    { id: 'co-detector', name: 'Carbon Monoxide Detector', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
+    { id: 'smoke-co-combo', name: 'Smoke & CO Combo Detector', category: 'Specialty & Safety', price: 39.98, unit: 'each' },
+    { id: 'surge-whole-house', name: 'Whole House Surge Protector', category: 'Specialty & Safety', price: 189.00, unit: 'each' },
+    { id: 'surge-strip', name: '8-Outlet Surge Protector Strip', category: 'Specialty & Safety', price: 24.98, unit: 'each' },
+    { id: 'doorbell-wired', name: 'Wired Doorbell Kit', category: 'Specialty & Safety', price: 19.98, unit: 'each' },
+    { id: 'doorbell-smart', name: 'Smart Video Doorbell', category: 'Specialty & Safety', price: 99.99, unit: 'each' },
+    { id: 'exhaust-fan-bath', name: 'Bathroom Exhaust Fan 80 CFM', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
+    { id: 'exhaust-fan-quiet', name: 'Ultra-Quiet Bathroom Fan 110 CFM', category: 'Specialty & Safety', price: 79.98, unit: 'each' },
+
+    // ===================
+    // EV CHARGING & HIGH-AMP
+    // ===================
+    { id: 'ev-charger-l2-32a', name: '32A Level 2 EV Charger', category: 'EV Charging', price: 499.00, unit: 'each' },
+    { id: 'ev-charger-l2-40a', name: '40A Level 2 EV Charger', category: 'EV Charging', price: 649.00, unit: 'each' },
+    { id: 'ev-charger-smart', name: 'Smart WiFi EV Charger 32A', category: 'EV Charging', price: 699.00, unit: 'each' },
+    { id: 'nema-6-50', name: 'NEMA 6-50 50A 240V Receptacle', category: 'EV Charging', price: 24.98, unit: 'each' },
+    { id: 'nema-14-50', name: 'NEMA 14-50 50A 240V Receptacle', category: 'EV Charging', price: 29.98, unit: 'each' },
+    { id: 'dryer-cord-4wire', name: '4-Wire 30A Dryer Cord', category: 'EV Charging', price: 34.98, unit: 'each' },
+
+    // ===================
+    // WIRE NUTS & CONNECTORS
+    // ===================
+    { id: 'wirenut-yellow', name: 'Yellow Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 12.98, unit: 'pack' },
+    { id: 'wirenut-red', name: 'Red Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 14.98, unit: 'pack' },
+    { id: 'wirenut-blue', name: 'Blue Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 16.98, unit: 'pack' },
+    { id: 'wirenut-orange', name: 'Orange Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 9.98, unit: 'pack' },
+    { id: 'wago-221', name: 'WAGO 221 Lever Connectors (25 pack)', category: 'Wire Nuts & Connectors', price: 24.98, unit: 'pack' },
+    { id: 'wiremold-splice', name: 'In-Line Splice Kit', category: 'Wire Nuts & Connectors', price: 8.98, unit: 'each' },
+
+    // ===================
+    // COVERS & PLATES
+    // ===================
+    { id: 'plate-1gang-white', name: 'Single Gang Toggle Switch Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
+    { id: 'plate-1gang-almond', name: 'Single Gang Toggle Switch Plate - Almond', category: 'Covers & Plates', price: 1.28, unit: 'each' },
+    { id: 'plate-1gang-decora', name: 'Single Gang Decora Switch Plate - White', category: 'Covers & Plates', price: 1.48, unit: 'each' },
+    { id: 'plate-2gang-white', name: 'Double Gang Switch Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' },
+    { id: 'plate-outlet-white', name: 'Duplex Outlet Cover Plate - White', category: 'Covers & Plates', price: 0.78, unit: 'each' },
+    { id: 'plate-blank-white', name: 'Blank Cover Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
+    { id: 'plate-gfci-white', name: 'GFCI Outlet Cover Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' }
+  ];
+
+  // Material pricing markup tiers
+  const materialMarkupTiers = [
+    { min: 0, max: 25, markup: 0.50 },      // 0-$25: 50% markup
+    { min: 25.01, max: 50, markup: 0.40 },  // $25.01-$50: 40% markup  
+    { min: 50.01, max: 100, markup: 0.35 }, // $50.01-$100: 35% markup
+    { min: 100.01, max: 250, markup: 0.30 }, // $100.01-$250: 30% markup
+    { min: 250.01, max: 500, markup: 0.25 }, // $250.01-$500: 25% markup
+    { min: 500.01, max: Infinity, markup: 0.20 } // $500+: 20% markup
+  ];
+
+  // Function to calculate markup price based on cost tiers
+  const calculateMarkupPrice = (costPrice: number): number => {
+    const tier = materialMarkupTiers.find(tier => 
+      costPrice >= tier.min && costPrice <= tier.max
+    );
+    
+    if (!tier) return costPrice * 1.35; // Default 35% if no tier matches
+    
+    return costPrice * (1 + tier.markup);
+  };
+
+  // Function to get markup percentage for display
+  const getMarkupPercentage = (costPrice: number): number => {
+    const tier = materialMarkupTiers.find(tier => 
+      costPrice >= tier.min && costPrice <= tier.max
+    );
+    
+    return tier ? tier.markup * 100 : 35; // Default 35% if no tier matches
+  };
+
+  // Material catalog item type
+  type MaterialCatalogItem = {
+    id: string;
+    name: string;
+    category: string;
+    price: number; // Customer price (with markup)
+    unit: string;
+    sku?: string;
+    current_stock?: number;
+    minimum_stock?: number;
+    isLowStock?: boolean;
+    description?: string;
+    costPrice?: number; // Base cost price
+    markupPercentage?: number; // Markup percentage applied
+  };
+
+  // Computed materials catalog that uses inventory data when available
+  const materialsCatalog: MaterialCatalogItem[] = React.useMemo(() => {
+    if (inventoryItems.length > 0) {
+      // Convert inventory items to materials catalog format with markup
+      return inventoryItems.map(item => ({
+        id: item.id.toString(),
+        name: item.name,
+        category: item.category_name || 'General',
+        price: calculateMarkupPrice(item.cost_price || item.unit_price), // Apply markup to cost price
+        unit: item.unit_of_measure,
+        sku: item.sku,
+        current_stock: item.current_stock,
+        minimum_stock: item.minimum_stock,
+        isLowStock: item.current_stock <= item.minimum_stock,
+        description: item.description,
+        costPrice: item.cost_price || item.unit_price,
+        markupPercentage: getMarkupPercentage(item.cost_price || item.unit_price)
+      }));
+    }
+    // Fall back to static catalog if no inventory data - apply markup to static prices
+    return fallbackMaterialsCatalog.map(item => ({
+      ...item,
+      price: calculateMarkupPrice(item.price), // Apply markup to fallback prices
+      current_stock: undefined,
+      minimum_stock: undefined,
+      isLowStock: false,
+      sku: undefined,
+      description: undefined,
+      costPrice: item.price, // Original price becomes cost price
+      markupPercentage: getMarkupPercentage(item.price)
+    }));
+  }, [inventoryItems]);
+
+  const addMaterialToLineItems = (material: MaterialCatalogItem, quantity?: number) => {
+    const qty = quantity || selectedMaterialQuantity[material.id] || 1;
+    
+    // Check stock availability for inventory items
+    if (material.current_stock !== undefined && qty > material.current_stock) {
+      alert(`Only ${material.current_stock} ${material.unit} available in stock. Please adjust quantity.`);
+      return;
+    }
+    
+    const lineItem = {
+      id: Date.now().toString(),
+      description: material.name,
+      quantity: qty,
+      unit_price: material.price,
+      total: qty * material.price,
+      type: 'material' as const,
+      // Add inventory tracking fields
+      inventory_item_id: material.current_stock !== undefined ? parseInt(material.id) : null,
+      sku: material.sku || null
+    };
+
+    setLineItems(prev => [...prev, lineItem]);
+    calculateEstimateTotals([...lineItems, lineItem]);
+    
+    // Track material usage for inventory items
+    if (material.current_stock !== undefined) {
+      trackMaterialUsage(parseInt(material.id), qty, 'estimate');
+    }
+    
+    // Reset quantity for this material
+    setSelectedMaterialQuantity(prev => ({ ...prev, [material.id]: 1 }));
+  };
+
+  // Track material usage in estimates/jobs
+  const trackMaterialUsage = async (itemId: number, quantity: number, type: 'estimate' | 'job') => {
+    try {
+      // Log material usage for tracking purposes
+      console.log(`Material usage tracked: Item ${itemId}, Quantity ${quantity}, Type: ${type}`);
+      
+      // In production, this would call an API to record material usage
+      // For now, we'll track it locally and optionally sync later
+      const usageRecord = {
+        item_id: itemId,
+        quantity_used: quantity,
+        usage_type: type,
+        timestamp: new Date().toISOString(),
+        reference_type: type,
+        reference_id: null, // Will be set when estimate/job is saved
+      };
+      
+      // Update local inventory items to reflect pending usage
+      setInventoryItems(prev => prev.map(item => 
+        item.id === itemId 
+          ? { 
+              ...item, 
+              pending_usage: ((item as any).pending_usage || 0) + quantity,
+              available_stock: item.current_stock - (((item as any).pending_usage || 0) + quantity)
+            } as Item & { pending_usage?: number; available_stock?: number }
+          : item
+      ));
+      
+    } catch (error) {
+      console.error('Error tracking material usage:', error);
+      // Don't block the user workflow for tracking errors
+    }
+  };
+
+  // Update inventory quantities when materials are consumed
+  const updateInventoryQuantities = async (lineItems: any[], jobId: string, type: 'job_created' | 'estimate_approved') => {
+    try {
+      const materialLineItems = lineItems.filter(item => 
+        item.type === 'material' && item.inventory_item_id
+      );
+      
+      if (materialLineItems.length === 0) return;
+      
+      console.log(`Updating inventory for ${materialLineItems.length} items (${type})`);
+      
+      // Process each material line item
+      for (const lineItem of materialLineItems) {
+        try {
+          // Create stock movement record via API
+          // await inventoryApi.adjustStock(
+          //   lineItem.inventory_item_id,
+          //   -lineItem.quantity, // Negative to reduce stock
+          //   `Used in ${type === 'job_created' ? 'job' : 'approved estimate'} ${jobId}`
+          // );
+          
+          // For now, update local state to simulate the API call
+          setInventoryItems(prev => prev.map(item => {
+            if (item.id === lineItem.inventory_item_id) {
+              const newStock = Math.max(0, item.current_stock - lineItem.quantity);
+              console.log(`Updating item ${item.name}: ${item.current_stock} -> ${newStock}`);
+              
+              return {
+                ...item,
+                current_stock: newStock,
+                pending_usage: Math.max(0, ((item as any).pending_usage || 0) - lineItem.quantity)
+              } as Item & { pending_usage?: number };
+            }
+            return item;
+          }));
+          
+          // Refresh low stock items
+          setLowStockItems(prev => {
+            const updatedItems = inventoryItems.map(item => {
+              if (item.id === lineItem.inventory_item_id) {
+                const newStock = Math.max(0, item.current_stock - lineItem.quantity);
+                return { ...item, current_stock: newStock };
+              }
+              return item;
+            });
+            return updatedItems.filter(item => item.current_stock <= item.minimum_stock);
+          });
+          
+        } catch (itemError) {
+          console.error(`Error updating inventory for item ${lineItem.inventory_item_id}:`, itemError);
+          // Continue with other items even if one fails
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating inventory quantities:', error);
+      // Don't block the main workflow for inventory errors
+    }
+  };
+
+  // Estimate approval workflow functions
+  const handleEstimateStatusUpdate = async (jobId: string, newStatus: NonNullable<Job['estimate_status']>) => {
+    try {
+      console.log(`Updating estimate ${jobId} status to ${newStatus}`);
+      
+      // Update estimate status locally (in production, would call API)
+      setJobs(prev => prev.map(job => 
+        job.id === jobId ? { ...job, estimate_status: newStatus } : job
+      ));
+      
+      setUnscheduledJobs(prev => prev.map(job => 
+        job.id === jobId ? { ...job, estimate_status: newStatus } : job
+      ));
+      
+      // Update selected job if it's the one being modified
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob({ ...selectedJob, estimate_status: newStatus });
+      }
+      
+      // Show status-specific messages
+      const statusMessages = {
+        'draft': 'Estimate saved as draft',
+        'sent': 'Estimate sent to customer via email',
+        'viewed': 'Customer has viewed the estimate',
+        'approved': 'Estimate approved by customer!',
+        'rejected': 'Estimate rejected by customer',
+        'expired': 'Estimate has expired'
+      };
+      
+      if (statusMessages[newStatus]) {
+        alert(statusMessages[newStatus]);
+      }
+      
+      // Update inventory when estimate is approved
+      if (newStatus === 'approved') {
+        const estimate = jobs.find(j => j.id === jobId) || unscheduledJobs.find(j => j.id === jobId);
+        if (estimate && (estimate as any).line_items) {
+          await updateInventoryQuantities((estimate as any).line_items, jobId, 'estimate_approved');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating estimate status:', error);
+      alert('Error updating estimate status');
+    }
+  };
+
+  const convertEstimateToJob = async (estimateId: string) => {
+    try {
+      const estimate = jobs.find(j => j.id === estimateId) || unscheduledJobs.find(j => j.id === estimateId);
+      if (!estimate || estimate.job_type !== 'estimate') {
+        throw new Error('Estimate not found');
+      }
+
+      console.log(`Converting estimate ${estimateId} to job`);
+      
+      // Create new job from estimate
+      const newJob = {
+        ...estimate,
+        id: `job-${Date.now()}`,
+        job_number: estimate.job_number.replace('EST-', 'JOB-'),
+        job_type: 'job' as const,
+        status: 'pending' as const,
+        estimate_status: undefined
+      };
+
+      // Add new job to unscheduled jobs
+      setUnscheduledJobs(prev => [newJob, ...prev]);
+      
+      // Update inventory quantities when converting to job
+      if ((estimate as any).line_items) {
+        await updateInventoryQuantities((estimate as any).line_items, newJob.id, 'job_created');
+      }
+      
+      // Update original estimate status to indicate it's been converted
+      handleEstimateStatusUpdate(estimateId, 'approved');
+      
+      alert(`Estimate converted to Job ${newJob.job_number}`);
+      setOpenJobDialog(false);
+      setSelectedJob(null);
+      
+    } catch (error) {
+      console.error('Error converting estimate to job:', error);
+      alert('Error converting estimate to job');
+    }
+  };
+
+  const sendEstimateToCustomer = async (estimateId: string) => {
+    try {
+      const estimate = jobs.find(j => j.id === estimateId) || unscheduledJobs.find(j => j.id === estimateId);
+      if (!estimate) {
+        throw new Error('Estimate not found');
+      }
+
+      console.log(`Sending estimate ${estimateId} to customer`);
+      
+      // Simulate sending estimate via email
+      const emailMessage = `Dear ${estimate.customer_name},
+
+Thank you for choosing AJ Long Electric for your electrical needs.
+
+Please find your estimate attached:
+- Estimate #: ${estimate.job_number}
+- Service: ${estimate.title}
+- Total Cost: $${estimate.estimated_cost?.toFixed(2) || '0.00'}
+
+This estimate is valid for 30 days from the date of issue.
+
+To approve this estimate, please reply to this email or call us at (555) 123-4567.
+
+Best regards,
+AJ Long Electric Team`;
+
+      alert(`Email sent to ${estimate.customer_name}:\n\n${emailMessage}`);
+      
+      // Update status to 'sent'
+      handleEstimateStatusUpdate(estimateId, 'sent');
+      
+    } catch (error) {
+      console.error('Error sending estimate:', error);
+      alert('Error sending estimate');
+    }
+  };
 
   if (loading) {
     return (
@@ -1743,6 +2399,40 @@ const SchedulingCalendar: React.FC = () => {
                   </Grid>
                 </>
               )}
+
+              {/* Property Selection */}
+              {newJobData.customer_id && selectedCustomerProperties.length > 0 && (
+                <Grid item xs={12}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Select Property</InputLabel>
+                    <Select
+                      value={selectedPropertyId || ''}
+                      label="Select Property"
+                      onChange={(e) => setSelectedPropertyId(Number(e.target.value))}
+                    >
+                      {selectedCustomerProperties.map((property) => (
+                        <MenuItem key={property.id} value={property.id}>
+                          <Box>
+                            <Typography variant="body2" fontWeight="bold">
+                              {property.full_address || `${property.street_address}, ${property.city}, ${property.state} ${property.zip_code}`}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {property.property_type?.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                              {property.square_footage && ` • ${property.square_footage.toLocaleString()} sq ft`}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {selectedCustomerProperties.length > 1 && !selectedPropertyId && (
+                    <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                      Please select a property for this job
+                    </Typography>
+                  )}
+                </Grid>
+              )}
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -1873,7 +2563,7 @@ const SchedulingCalendar: React.FC = () => {
                             inputProps={{ min: 0, step: 0.01 }}
                           />
                         </Grid>
-                        <Grid item xs={6} sm={2}>
+                        <Grid item xs={6} sm={1.5}>
                           <Button
                             fullWidth
                             variant="contained"
@@ -1882,6 +2572,17 @@ const SchedulingCalendar: React.FC = () => {
                             disabled={!newLineItem.description || newLineItem.unit_price <= 0}
                           >
                             Add
+                          </Button>
+                        </Grid>
+                        <Grid item xs={6} sm={1.5}>
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={() => setShowMaterialsCatalog(true)}
+                            startIcon={<InventoryIcon />}
+                            size="small"
+                          >
+                            Parts
                           </Button>
                         </Grid>
                       </Grid>
@@ -1975,6 +2676,24 @@ const SchedulingCalendar: React.FC = () => {
                   <strong>Priority:</strong> {selectedJob.priority}
                 </Typography>
               </Grid>
+              {selectedJob.job_type === 'estimate' && (
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Estimate Status:</strong>{' '}
+                    <Chip
+                      label={getEstimateStatusText(selectedJob.estimate_status)}
+                      size="small"
+                      sx={{
+                        backgroundColor: getEstimateStatusColor(selectedJob.estimate_status),
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        height: 20,
+                        ml: 1
+                      }}
+                    />
+                  </Typography>
+                </Grid>
+              )}
               <Grid item xs={6}>
                 <Typography variant="body2">
                   <strong>Service:</strong> {selectedJob.service_type_name}
@@ -2040,7 +2759,7 @@ const SchedulingCalendar: React.FC = () => {
                     title: newJobData.title,
                     description: newJobData.description,
                     customer: newJobData.customer_id || 1,
-                    property: 1,
+                    property: selectedPropertyId || 1,
                     service_type: newJobData.service_type_name || 'General Service',
                     priority: newJobData.priority as 'low' | 'medium' | 'high' | 'emergency',
                     status: 'pending' as const,
@@ -2054,12 +2773,19 @@ const SchedulingCalendar: React.FC = () => {
                       tax_rate: newJobData.tax_rate,
                       line_items: lineItems,
                       subtotal: newJobData.subtotal,
-                      total_cost: newJobData.total_cost
+                      total_cost: newJobData.total_cost,
+                      estimate_status: 'draft' as const
                     })
                   };
 
                   // Create a new job via the backend API
                   await jobApi.create(jobPayload);
+                  
+                  // Update inventory quantities for jobs (not estimates - they update when approved)
+                  if (newJobData.job_type === 'job') {
+                    const jobId = `job-${Date.now()}`;
+                    await updateInventoryQuantities(lineItems, jobId, 'job_created');
+                  }
                   
                   const successMessage = newJobData.job_type === 'estimate' ? 
                     `Estimate created successfully! Total: $${newJobData.total_cost.toFixed(2)}` :
@@ -2075,14 +2801,71 @@ const SchedulingCalendar: React.FC = () => {
                 }
               }}
               disabled={!newJobData.title || !newJobData.customer_name || !newJobData.service_type_name || 
-                       (newJobData.job_type === 'estimate' && lineItems.length === 0)}
+                       (newJobData.job_type === 'estimate' && lineItems.length === 0) ||
+                       (selectedCustomerProperties.length > 1 && !selectedPropertyId)}
             >
               Create {newJobData.job_type === 'estimate' ? 'Estimate' : 'Job'}
             </Button>
           ) : selectedJob ? (
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {/* Estimate workflow buttons */}
+              {selectedJob.job_type === 'estimate' && (
+                <>
+                  {selectedJob.estimate_status === 'draft' && (
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      onClick={() => sendEstimateToCustomer(selectedJob.id)}
+                      startIcon={<EmailIcon />}
+                    >
+                      📧 Send Estimate
+                    </Button>
+                  )}
+                  
+                  {(selectedJob.estimate_status === 'sent' || selectedJob.estimate_status === 'viewed') && (
+                    <>
+                      <Button 
+                        variant="contained" 
+                        color="success"
+                        onClick={() => handleEstimateStatusUpdate(selectedJob.id, 'approved')}
+                        startIcon={<ApproveIcon />}
+                      >
+                        ✅ Mark Approved
+                      </Button>
+                      <Button 
+                        variant="outlined" 
+                        color="error"
+                        onClick={() => handleEstimateStatusUpdate(selectedJob.id, 'rejected')}
+                        startIcon={<RejectIcon />}
+                      >
+                        ❌ Mark Rejected
+                      </Button>
+                    </>
+                  )}
+                  
+                  {selectedJob.estimate_status === 'approved' && (
+                    <Button 
+                      variant="contained" 
+                      color="secondary"
+                      onClick={() => convertEstimateToJob(selectedJob.id)}
+                      startIcon={<DocumentIcon />}
+                    >
+                      🔄 Convert to Job
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    variant="outlined" 
+                    color="warning"
+                    onClick={() => handleEstimateStatusUpdate(selectedJob.id, 'expired')}
+                  >
+                    ⏰ Mark Expired
+                  </Button>
+                </>
+              )}
+              
               {/* Job workflow buttons based on status */}
-              {selectedJob.status === 'scheduled' && (
+              {selectedJob.job_type === 'job' && selectedJob.status === 'scheduled' && (
                 <Button 
                   variant="contained" 
                   color="warning"
@@ -2093,7 +2876,7 @@ const SchedulingCalendar: React.FC = () => {
                 </Button>
               )}
               
-              {selectedJob.status === 'on_the_way' && (
+              {selectedJob.job_type === 'job' && selectedJob.status === 'on_the_way' && (
                 <Button 
                   variant="contained" 
                   color="success"
@@ -2103,7 +2886,7 @@ const SchedulingCalendar: React.FC = () => {
                 </Button>
               )}
               
-              {selectedJob.status === 'in_progress' && (
+              {selectedJob.job_type === 'job' && selectedJob.status === 'in_progress' && (
                 <Button 
                   variant="contained" 
                   color="primary"
@@ -2113,7 +2896,7 @@ const SchedulingCalendar: React.FC = () => {
                 </Button>
               )}
               
-              {selectedJob.status === 'completed' && selectedJob.payment_status !== 'paid' && (
+              {selectedJob.job_type === 'job' && selectedJob.status === 'completed' && selectedJob.payment_status !== 'paid' && (
                 <>
                   <Button 
                     variant="contained" 
@@ -2137,6 +2920,207 @@ const SchedulingCalendar: React.FC = () => {
               </Button>
             </Box>
           ) : null}
+        </DialogActions>
+      </Dialog>
+
+      {/* Materials Catalog Dialog */}
+      <Dialog
+        open={showMaterialsCatalog}
+        onClose={() => setShowMaterialsCatalog(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          🔧 Electrical Parts & Materials Catalog
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select materials to add to your estimate. Prices include standard markup.
+          </Typography>
+          
+          {/* Low stock warning */}
+          {lowStockItems.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <strong>Low Stock Alert:</strong> {lowStockItems.length} item{lowStockItems.length > 1 ? 's' : ''} running low. 
+              Items: {lowStockItems.slice(0, 3).map(item => item.name).join(', ')}
+              {lowStockItems.length > 3 && ` and ${lowStockItems.length - 3} more`}.
+            </Alert>
+          )}
+          
+          {/* Inventory loading indicator */}
+          {inventoryLoading && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <CircularProgress size={16} />
+              <Typography variant="caption">Loading inventory data...</Typography>
+            </Box>
+          )}
+          
+          {/* Search bar */}
+          <TextField
+            fullWidth
+            placeholder="Search materials..."
+            value={materialSearchQuery}
+            onChange={(e) => setMaterialSearchQuery(e.target.value)}
+            sx={{ mb: 2 }}
+            size="small"
+          />
+          
+          {/* Markup tier information */}
+          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
+              📊 Material Markup Tiers
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {materialMarkupTiers.map((tier, index) => (
+                <Chip
+                  key={index}
+                  label={`$${tier.min === 0 ? '0' : tier.min.toFixed(2)}-${tier.max === Infinity ? '∞' : '$' + tier.max.toFixed(2)}: ${(tier.markup * 100).toFixed(0)}%`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: '11px' }}
+                />
+              ))}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Prices shown include automatic markup based on material cost
+            </Typography>
+          </Box>
+          
+          {/* Group materials by category */}
+          {Array.from(new Set(materialsCatalog
+            .filter(item => 
+              materialSearchQuery === '' || 
+              item.name.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
+              item.category.toLowerCase().includes(materialSearchQuery.toLowerCase())
+            )
+            .map(item => item.category)
+          )).map(category => {
+            const filteredMaterials = materialsCatalog
+              .filter(item => item.category === category)
+              .filter(item => 
+                materialSearchQuery === '' || 
+                item.name.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
+                item.category.toLowerCase().includes(materialSearchQuery.toLowerCase())
+              );
+            
+            if (filteredMaterials.length === 0) return null;
+            
+            return (
+              <Box key={category} sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ 
+                  color: 'primary.main', 
+                  borderBottom: '2px solid',
+                  borderColor: 'primary.main',
+                  pb: 0.5,
+                  mb: 2
+                }}>
+                  {category}
+                </Typography>
+                <Grid container spacing={1}>
+                  {filteredMaterials.map(material => (
+                    <Grid item xs={12} sm={6} md={4} key={material.id}>
+                      <Card 
+                        sx={{ 
+                          height: '100%',
+                          transition: 'all 0.2s',
+                          '&:hover': { 
+                            transform: 'translateY(-2px)',
+                            boxShadow: 3
+                          }
+                        }}
+                      >
+                        <CardContent sx={{ p: 2 }}>
+                          <Typography variant="body2" fontWeight="bold" noWrap title={material.name}>
+                            {material.name}
+                          </Typography>
+                          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                            ${material.price.toFixed(2)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            per {material.unit}
+                          </Typography>
+                          
+                          {/* Cost and markup information */}
+                          {material.costPrice && material.markupPercentage && (
+                            <Box sx={{ mt: 0.5 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                Cost: ${material.costPrice.toFixed(2)} • Markup: {material.markupPercentage.toFixed(0)}%
+                              </Typography>
+                            </Box>
+                          )}
+                          
+                          {/* Stock information for inventory items */}
+                          {material.current_stock !== undefined && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography 
+                                variant="caption" 
+                                color={material.isLowStock ? 'error' : 'text.secondary'}
+                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                              >
+                                {material.isLowStock && (
+                                  <span style={{ color: '#f44336', fontSize: '12px' }}>⚠️</span>
+                                )}
+                                Stock: {material.current_stock} {material.unit}
+                                {material.isLowStock && ' (Low)'}
+                              </Typography>
+                              {material.sku && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
+                                  SKU: {material.sku}
+                                </Typography>
+                              )}
+                            </Box>
+                          )}
+                          
+                          {/* Quantity selector and add button */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={selectedMaterialQuantity[material.id] || 1}
+                              onChange={(e) => {
+                                const newQty = parseInt(e.target.value) || 1;
+                                const maxQty = material.current_stock !== undefined ? material.current_stock : 999;
+                                setSelectedMaterialQuantity(prev => ({
+                                  ...prev,
+                                  [material.id]: Math.max(1, Math.min(newQty, maxQty))
+                                }));
+                              }}
+                              inputProps={{ 
+                                min: 1, 
+                                max: material.current_stock !== undefined ? material.current_stock : 999 
+                              }}
+                              sx={{ width: 60 }}
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={material.current_stock === 0}
+                            />
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addMaterialToLineItems(material);
+                              }}
+                              startIcon={<AddItemIcon />}
+                              fullWidth
+                              disabled={material.current_stock === 0}
+                              color={material.isLowStock ? 'warning' : 'primary'}
+                            >
+                              {material.current_stock === 0 ? 'Out of Stock' : 'Add'}
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            );
+          })}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowMaterialsCatalog(false)}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

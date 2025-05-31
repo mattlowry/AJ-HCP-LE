@@ -3,6 +3,8 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
+import ErrorBoundary, { PageErrorBoundary } from './components/ErrorBoundary';
+import GlobalErrorHandler from './components/GlobalErrorHandler';
 import Dashboard from './components/Dashboard';
 import CustomerList from './components/CustomerList';
 import CustomerDetail from './components/CustomerDetail';
@@ -34,74 +36,117 @@ function App() {
 
   try {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <AuthProvider>
-          <Router>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<UserRegistration />} />
-              
-              {/* Protected Routes with Main Layout */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }>
-                <Route index element={<Dashboard />} />
-                <Route path="customers" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                    <CustomerList />
-                  </ProtectedRoute>
+      <ErrorBoundary component="App">
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AuthProvider>
+            <Router>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={
+                  <PageErrorBoundary pageName="Login">
+                    <Login />
+                  </PageErrorBoundary>
                 } />
-                <Route path="customers/new" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <CustomerDetail />
-                  </ProtectedRoute>
+                <Route path="/register" element={
+                  <PageErrorBoundary pageName="Registration">
+                    <UserRegistration />
+                  </PageErrorBoundary>
                 } />
-                <Route path="customers/:id" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                    <CustomerDetail />
+                
+                {/* Protected Routes with Main Layout */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <ErrorBoundary component="MainLayout">
+                      <MainLayout />
+                    </ErrorBoundary>
                   </ProtectedRoute>
-                } />
-                <Route path="scheduling" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                    <SchedulingCalendar />
-                  </ProtectedRoute>
-                } />
-                <Route path="jobs" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                    <JobList />
-                  </ProtectedRoute>
-                } />
-                <Route path="billing" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <BillingInvoices />
-                  </ProtectedRoute>
-                } />
-                <Route path="inventory" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                    <InventoryManagement />
-                  </ProtectedRoute>
-                } />
-                <Route path="analytics" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <AnalyticsDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="technicians" element={
-                  <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                    <TechnicianManagement />
-                  </ProtectedRoute>
-                } />
-                <Route path="validation-demo" element={<ValidationDemo />} />
-                <Route path="profile" element={<UserProfile />} />
-              </Route>
-            </Routes>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
+                }>
+                  <Route index element={
+                    <PageErrorBoundary pageName="Dashboard">
+                      <Dashboard />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="customers" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                      <PageErrorBoundary pageName="Customer List">
+                        <CustomerList />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="customers/new" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                      <PageErrorBoundary pageName="New Customer">
+                        <CustomerDetail />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="customers/:id" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                      <PageErrorBoundary pageName="Customer Details">
+                        <CustomerDetail />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="scheduling" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                      <PageErrorBoundary pageName="Scheduling">
+                        <SchedulingCalendar />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="jobs" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                      <PageErrorBoundary pageName="Jobs">
+                        <JobList />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="billing" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                      <PageErrorBoundary pageName="Billing">
+                        <BillingInvoices />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="inventory" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+                      <PageErrorBoundary pageName="Inventory">
+                        <InventoryManagement />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="analytics" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                      <PageErrorBoundary pageName="Analytics">
+                        <AnalyticsDashboard />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="technicians" element={
+                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                      <PageErrorBoundary pageName="Technicians">
+                        <TechnicianManagement />
+                      </PageErrorBoundary>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="validation-demo" element={
+                    <PageErrorBoundary pageName="Validation Demo">
+                      <ValidationDemo />
+                    </PageErrorBoundary>
+                  } />
+                  <Route path="profile" element={
+                    <PageErrorBoundary pageName="Profile">
+                      <UserProfile />
+                    </PageErrorBoundary>
+                  } />
+                </Route>
+              </Routes>
+            </Router>
+            <GlobalErrorHandler />
+          </AuthProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
     );
   } catch (error) {
     console.error('App render error:', error);

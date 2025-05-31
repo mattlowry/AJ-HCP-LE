@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
+import { errorLogger, withErrorHandling, ErrorType } from '../utils/errorHandling';
 import { Customer, CustomerListItem, Property, CustomerContact, CustomerReview } from '../types/customer';
 import { Job, JobListItem } from '../types/job';
 import { Invoice, Estimate, Payment } from '../types/billing';
@@ -12,7 +13,111 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
+
+// Request interceptor for adding auth tokens and logging
+api.interceptors.request.use(
+  (config) => {
+    // Add auth token if available
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Log API requests in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
+        params: config.params,
+        data: config.data
+      });
+    }
+
+    return config;
+  },
+  (error) => {
+    errorLogger.handleError(error, {
+      component: 'APIService',
+      action: 'Request Interceptor',
+      userMessage: 'Failed to prepare API request'
+    });
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling and logging
+api.interceptors.response.use(
+  (response: AxiosResponse) => {
+    // Log successful responses in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+        status: response.status,
+        data: response.data
+      });
+    }
+    return response;
+  },
+  (error: AxiosError) => {
+    // Handle different types of errors
+    const errorDetails = errorLogger.handleError(error, {
+      component: 'APIService',
+      action: `${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+      userMessage: getErrorMessage(error)
+    });
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      // Unauthorized - clear auth and redirect to login
+      localStorage.removeItem('authToken');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/#/login';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Helper function to get user-friendly error messages
+const getErrorMessage = (error: AxiosError): string => {
+  if (!error.response) {
+    return 'Network connection error. Please check your internet connection.';
+  }
+
+  const status = error.response.status;
+  const data = error.response.data as any;
+
+  switch (status) {
+    case 400:
+      return data?.message || 'Invalid request. Please check your input.';
+    case 401:
+      return 'Your session has expired. Please log in again.';
+    case 403:
+      return 'You do not have permission to perform this action.';
+    case 404:
+      return 'The requested resource was not found.';
+    case 422:
+      return data?.message || 'Please check your input and try again.';
+    case 429:
+      return 'Too many requests. Please wait a moment and try again.';
+    case 500:
+      return 'Server error occurred. Our team has been notified.';
+    case 502:
+    case 503:
+    case 504:
+      return 'Service temporarily unavailable. Please try again later.';
+    default:
+      return data?.message || 'An unexpected error occurred. Please try again.';
+  }
+};
+
+// Enhanced API wrapper with error handling
+const createApiMethod = <T>(apiCall: () => Promise<AxiosResponse<T>>, context: string) => {
+  return withErrorHandling(apiCall, {
+    component: 'APIService',
+    action: context
+  });
+};
 
 // Customer API
 export const customerApi = {
