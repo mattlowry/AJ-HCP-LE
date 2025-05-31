@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   Box,
   Typography,
@@ -122,13 +123,71 @@ const AnalyticsDashboard: React.FC = () => {
   const loadAnalyticsData = async () => {
     try {
       setLoading(true);
-      // For demo, use local data
+      
+      // API URL from environment variable or default to localhost
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+      
+      // Fetch data from backend in parallel
+      const [businessOverviewResponse, financialSummaryResponse, operationalMetricsResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/analytics/business_overview/`),
+        axios.get(`${API_BASE_URL}/analytics/financial_summary/`),
+        axios.get(`${API_BASE_URL}/analytics/operational_metrics/`),
+      ]);
+      
+      // Set business metrics
+      setBusinessMetrics({
+        totalCustomers: businessOverviewResponse.data.total_customers,
+        activeJobs: businessOverviewResponse.data.active_jobs,
+        monthlyRevenue: businessOverviewResponse.data.monthly_revenue,
+        pendingInvoices: businessOverviewResponse.data.pending_invoices,
+        technicianUtilization: businessOverviewResponse.data.technician_utilization,
+        customerSatisfaction: businessOverviewResponse.data.customer_satisfaction
+      });
+      
+      // Set financial data
+      setFinancialData({
+        totalRevenue: financialSummaryResponse.data.total_revenue,
+        totalOutstanding: financialSummaryResponse.data.total_outstanding,
+        averageInvoiceAmount: financialSummaryResponse.data.average_invoice_amount,
+        paymentProcessingTime: financialSummaryResponse.data.payment_processing_time,
+        revenueTrend: financialSummaryResponse.data.revenue_trend.map((item: any) => ({
+          month: item.month,
+          revenue: item.revenue
+        })),
+        topCustomers: financialSummaryResponse.data.top_customers.map((customer: any) => ({
+          id: customer.id,
+          name: `${customer.first_name} ${customer.last_name}`,
+          totalSpent: customer.total_spent
+        }))
+      });
+      
+      // Set technician performance data from operational metrics
+      if (operationalMetricsResponse.data.technician_productivity && 
+          operationalMetricsResponse.data.technician_productivity.length > 0) {
+        
+        const techPerformance = operationalMetricsResponse.data.technician_productivity.map((tech: any) => ({
+          id: tech.id,
+          name: `${tech.user__first_name} ${tech.user__last_name}`,
+          jobsCompleted: tech.job_count || 0,
+          revenueGenerated: tech.revenue || 0,
+          customerRating: 4.5, // This would ideally come from customer ratings
+          utilizationRate: businessOverviewResponse.data.technician_utilization || 85.5
+        }));
+        
+        setTechnicianPerformance(techPerformance);
+      } else {
+        // Fallback to demo data if API doesn't return proper data
+        setTechnicianPerformance(demoTechnicianPerformance);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading analytics data:', err);
+      // Fallback to demo data in case of API error
       setBusinessMetrics(demoBusinessMetrics);
       setFinancialData(demoFinancialData);
       setTechnicianPerformance(demoTechnicianPerformance);
-      setLoading(false);
-    } catch (err) {
-      setError('Failed to load analytics data');
+      setError('Failed to load live analytics data - showing demo data');
       setLoading(false);
     }
   };

@@ -4,7 +4,7 @@ import {Job, JobUpdate} from '../types/Job';
 
 const API_BASE_URL = __DEV__ 
   ? 'http://localhost:8000/api' 
-  : 'https://your-production-api.com/api';
+  : 'https://aj-long-electric.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -128,9 +128,38 @@ class Invoice(models.Model):
         line_items = self.line_items.all()
         self.subtotal = sum(item.total_amount for item in line_items)
         
-        # Calculate tax
-        if hasattr(self, 'tax_rate') and self.tax_rate:
-            self.tax_amount = self.subtotal * (self.tax_rate.rate_percentage / 100)
+        # Calculate tax based on property location
+        if hasattr(self, 'billing_property') and self.billing_property and hasattr(self.billing_property, 'zipcode'):
+            # Try to find a tax rate for this zipcode
+            try:
+                tax_rate = TaxRate.objects.filter(
+                    jurisdiction__icontains=self.billing_property.zipcode,
+                    is_active=True,
+                    effective_date__lte=date.today()
+                ).order_by('-effective_date').first()
+                
+                if tax_rate:
+                    self.tax_amount = self.subtotal * (tax_rate.rate_percentage / 100)
+                    return
+            except Exception as e:
+                print(f"Error finding tax rate: {e}")
+        
+        # If no property or no matching tax rate, use default
+        try:
+            default_rate = TaxRate.objects.filter(
+                is_active=True, 
+                effective_date__lte=date.today()
+            ).order_by('-effective_date').first()
+            
+            if default_rate:
+                self.tax_amount = self.subtotal * (default_rate.rate_percentage / 100)
+            else:
+                # Fall back to default 8% if no tax rates exist
+                self.tax_amount = self.subtotal * Decimal('0.08')
+        except Exception as e:
+            print(f"Error calculating tax: {e}")
+            # Fallback to 8% tax
+            self.tax_amount = self.subtotal * Decimal('0.08')
         
         # Calculate total
         self.total_amount = self.subtotal + self.tax_amount - self.discount_amount
@@ -374,9 +403,38 @@ class Estimate(models.Model):
         line_items = self.line_items.all()
         self.subtotal = sum(item.total_amount for item in line_items)
         
-        # Calculate tax (simplified - could be more complex)
-        # Tax rate would be determined by property location
-        self.tax_amount = self.subtotal * Decimal('0.08')  # 8% default
+        # Calculate tax based on property location
+        if hasattr(self, 'estimate_property') and self.estimate_property and hasattr(self.estimate_property, 'zipcode'):
+            # Try to find a tax rate for this zipcode
+            try:
+                tax_rate = TaxRate.objects.filter(
+                    jurisdiction__icontains=self.estimate_property.zipcode,
+                    is_active=True,
+                    effective_date__lte=date.today()
+                ).order_by('-effective_date').first()
+                
+                if tax_rate:
+                    self.tax_amount = self.subtotal * (tax_rate.rate_percentage / 100)
+                    return
+            except Exception as e:
+                print(f"Error finding tax rate: {e}")
+        
+        # If no property or no matching tax rate, use default
+        try:
+            default_rate = TaxRate.objects.filter(
+                is_active=True, 
+                effective_date__lte=date.today()
+            ).order_by('-effective_date').first()
+            
+            if default_rate:
+                self.tax_amount = self.subtotal * (default_rate.rate_percentage / 100)
+            else:
+                # Fall back to default 8% if no tax rates exist
+                self.tax_amount = self.subtotal * Decimal('0.08')
+        except Exception as e:
+            print(f"Error calculating tax: {e}")
+            # Fallback to 8% tax
+            self.tax_amount = self.subtotal * Decimal('0.08')
         
         # Calculate total
         self.total_amount = self.subtotal + self.tax_amount - self.discount_amount

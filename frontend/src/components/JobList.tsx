@@ -21,8 +21,16 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
+  Divider
 } from '@mui/material';
+// Temporarily disabled date picker imports
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -45,6 +53,7 @@ interface Job {
   estimated_duration: number;
   total_amount: number;
   created_at: string;
+  notes?: string;
 }
 
 interface Customer {
@@ -65,6 +74,7 @@ interface Technician {
     first_name: string;
     last_name: string;
   };
+  full_name?: string;
 }
 
 const JobList: React.FC = () => {
@@ -75,6 +85,28 @@ const JobList: React.FC = () => {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  
+  // Demo data for dropdowns
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    customer_id: '',
+    property_address: '',
+    service_type_id: '',
+    status: 'pending',
+    priority: 'medium',
+    scheduled_date: new Date(),
+    assigned_technician_id: '',
+    description: '',
+    estimated_duration: 2,
+    total_amount: 0,
+    notes: ''
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Demo data
   const demoJobs: Job[] = [
@@ -115,7 +147,7 @@ const JobList: React.FC = () => {
       property_address: '789 Pine St, Elsewhere, NY 12347',
       service_type: 'Emergency Service',
       status: 'completed',
-      priority: 'critical',
+      priority: 'emergency',
       scheduled_date: '2024-01-12T16:00:00Z',
       assigned_technician: 'Mike Johnson',
       description: 'Power outage in entire house',
@@ -151,9 +183,34 @@ const JobList: React.FC = () => {
       setLoading(false);
     }
   };
+  
+  // Load demo customers, service types, and technicians
+  const loadDemoData = () => {
+    setCustomers([
+      { id: 1, first_name: 'John', last_name: 'Smith', full_name: 'John Smith' },
+      { id: 2, first_name: 'Sarah', last_name: 'Davis', full_name: 'Sarah Davis' },
+      { id: 3, first_name: 'Robert', last_name: 'Brown', full_name: 'Robert Brown' },
+      { id: 4, first_name: 'Lisa', last_name: 'Garcia', full_name: 'Lisa Garcia' },
+    ]);
+    
+    setServiceTypes([
+      { id: 1, name: 'Electrical Repair' },
+      { id: 2, name: 'Panel Installation' },
+      { id: 3, name: 'Emergency Service' },
+      { id: 4, name: 'Wiring Installation' },
+      { id: 5, name: 'Lighting Installation' },
+    ]);
+    
+    setTechnicians([
+      { id: 1, user: { first_name: 'Mike', last_name: 'Johnson' }, full_name: 'Mike Johnson' },
+      { id: 2, user: { first_name: 'Tom', last_name: 'Wilson' }, full_name: 'Tom Wilson' },
+      { id: 3, user: { first_name: 'Steve', last_name: 'Miller' }, full_name: 'Steve Miller' },
+    ]);
+  };
 
   useEffect(() => {
     loadJobs();
+    loadDemoData();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -172,7 +229,7 @@ const JobList: React.FC = () => {
       case 'low': return 'success';
       case 'medium': return 'warning';
       case 'high': return 'error';
-      case 'critical': return 'error';
+      case 'emergency': return 'error';
       default: return 'default';
     }
   };
@@ -182,16 +239,58 @@ const JobList: React.FC = () => {
                          job.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          job.service_type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === '' || job.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesPriority = priorityFilter === '' || job.priority === priorityFilter;
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
   const handleCreateJob = () => {
     setEditingJob(null);
+    // Reset form data
+    setFormData({
+      customer_id: '',
+      property_address: '',
+      service_type_id: '',
+      status: 'pending',
+      priority: 'medium',
+      scheduled_date: new Date(),
+      assigned_technician_id: '',
+      description: '',
+      estimated_duration: 2,
+      total_amount: 0,
+      notes: ''
+    });
+    setFormErrors({});
     setOpenDialog(true);
   };
 
   const handleEditJob = (job: Job) => {
     setEditingJob(job);
+    
+    // Find the associated customer, service type, and technician IDs
+    const customerId = customers.find(c => c.full_name === job.customer_name)?.id.toString() || '';
+    const serviceTypeId = serviceTypes.find(s => s.name === job.service_type)?.id.toString() || '';
+    
+    // Safely handle technician lookup
+    let technicianId = '';
+    if (job.assigned_technician) {
+      technicianId = technicians.find(t => t.full_name === job.assigned_technician)?.id.toString() || '';
+    }
+    
+    setFormData({
+      customer_id: customerId,
+      property_address: job.property_address,
+      service_type_id: serviceTypeId,
+      status: job.status,
+      priority: job.priority,
+      scheduled_date: new Date(job.scheduled_date),
+      assigned_technician_id: technicianId,
+      description: job.description,
+      estimated_duration: job.estimated_duration,
+      total_amount: job.total_amount,
+      notes: job.notes || ''
+    });
+    
+    setFormErrors({});
     setOpenDialog(true);
   };
 
@@ -206,8 +305,64 @@ const JobList: React.FC = () => {
     }
   };
 
-  const handleSaveJob = async (jobData: any) => {
+  const handleFormChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error for this field if it exists
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+  
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.customer_id) errors.customer_id = 'Customer is required';
+    if (!formData.property_address) errors.property_address = 'Property address is required';
+    if (!formData.service_type_id) errors.service_type_id = 'Service type is required';
+    if (!formData.description) errors.description = 'Description is required';
+    if (formData.estimated_duration <= 0) errors.estimated_duration = 'Duration must be greater than 0';
+    if (formData.total_amount < 0) errors.total_amount = 'Amount cannot be negative';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const handleSaveJob = async () => {
     try {
+      if (!validateForm()) return;
+      
+      // Find related objects by ID
+      const customer = customers.find(c => c.id.toString() === formData.customer_id);
+      const serviceType = serviceTypes.find(s => s.id.toString() === formData.service_type_id);
+      const technician = technicians.find(t => t.id.toString() === formData.assigned_technician_id);
+      
+      if (!customer || !serviceType) {
+        setError('Missing required relationship data');
+        return;
+      }
+      
+      const jobData = {
+        customer_name: customer.full_name,
+        property_address: formData.property_address,
+        service_type: serviceType.name,
+        status: formData.status,
+        priority: formData.priority,
+        scheduled_date: formData.scheduled_date.toISOString(),
+        assigned_technician: technician?.full_name || '',
+        description: formData.description,
+        estimated_duration: Number(formData.estimated_duration),
+        total_amount: Number(formData.total_amount),
+        notes: formData.notes
+      };
+      
       if (editingJob) {
         // Update existing job
         setJobs(jobs.map(job => 
@@ -331,6 +486,21 @@ const JobList: React.FC = () => {
             <MenuItem value="cancelled">Cancelled</MenuItem>
           </TextField>
         </Grid>
+        <Grid item xs={12} md={3}>
+          <TextField
+            select
+            fullWidth
+            label="Priority"
+            value={priorityFilter || ''}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+          >
+            <MenuItem value="">All Priorities</MenuItem>
+            <MenuItem value="low">Low</MenuItem>
+            <MenuItem value="medium">Medium</MenuItem>
+            <MenuItem value="high">High</MenuItem>
+            <MenuItem value="emergency">Emergency</MenuItem>
+          </TextField>
+        </Grid>
       </Grid>
 
       {/* Jobs Table */}
@@ -436,19 +606,199 @@ const JobList: React.FC = () => {
         </Box>
       )}
 
-      {/* Job Dialog - Placeholder for now */}
+      {/* Job Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {editingJob ? 'Edit Job' : 'Create New Job'}
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Job creation/editing form will be implemented here.
-          </Typography>
+          <Box component="form" sx={{ mt: 2 }}>
+            <Grid container spacing={2}>
+              {/* Customer Selection */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth error={!!formErrors.customer_id}>
+                  <InputLabel>Customer</InputLabel>
+                  <Select
+                    value={formData.customer_id}
+                    label="Customer"
+                    onChange={(e) => handleFormChange('customer_id', e.target.value)}
+                  >
+                    <MenuItem value=""><em>Select Customer</em></MenuItem>
+                    {customers.map(customer => (
+                      <MenuItem key={customer.id} value={customer.id.toString()}>
+                        {customer.full_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors.customer_id && (
+                    <FormHelperText>{formErrors.customer_id}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Property Address */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Property Address"
+                  value={formData.property_address}
+                  onChange={(e) => handleFormChange('property_address', e.target.value)}
+                  error={!!formErrors.property_address}
+                  helperText={formErrors.property_address}
+                />
+              </Grid>
+              
+              {/* Service Type */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth error={!!formErrors.service_type_id}>
+                  <InputLabel>Service Type</InputLabel>
+                  <Select
+                    value={formData.service_type_id}
+                    label="Service Type"
+                    onChange={(e) => handleFormChange('service_type_id', e.target.value)}
+                  >
+                    <MenuItem value=""><em>Select Service Type</em></MenuItem>
+                    {serviceTypes.map(type => (
+                      <MenuItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {formErrors.service_type_id && (
+                    <FormHelperText>{formErrors.service_type_id}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Status */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={formData.status}
+                    label="Status"
+                    onChange={(e) => handleFormChange('status', e.target.value)}
+                  >
+                    <MenuItem value="pending">Pending</MenuItem>
+                    <MenuItem value="scheduled">Scheduled</MenuItem>
+                    <MenuItem value="in_progress">In Progress</MenuItem>
+                    <MenuItem value="completed">Completed</MenuItem>
+                    <MenuItem value="cancelled">Cancelled</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {/* Priority */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={formData.priority}
+                    label="Priority"
+                    onChange={(e) => handleFormChange('priority', e.target.value)}
+                  >
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="emergency">Emergency</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {/* Scheduled Date/Time - Temporarily using basic input */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Scheduled Date & Time"
+                  type="datetime-local"
+                  value={formData.scheduled_date}
+                  onChange={(e) => handleFormChange('scheduled_date', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              
+              {/* Technician */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Assigned Technician</InputLabel>
+                  <Select
+                    value={formData.assigned_technician_id}
+                    label="Assigned Technician"
+                    onChange={(e) => handleFormChange('assigned_technician_id', e.target.value)}
+                  >
+                    <MenuItem value=""><em>None</em></MenuItem>
+                    {technicians.map(tech => (
+                      <MenuItem key={tech.id} value={tech.id.toString()}>
+                        {tech.full_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {/* Estimated Duration */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Estimated Duration (hours)"
+                  value={formData.estimated_duration}
+                  onChange={(e) => handleFormChange('estimated_duration', e.target.value)}
+                  error={!!formErrors.estimated_duration}
+                  helperText={formErrors.estimated_duration}
+                  InputProps={{ inputProps: { min: 0 } }}
+                />
+              </Grid>
+              
+              {/* Total Amount */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Total Amount ($)"
+                  value={formData.total_amount}
+                  onChange={(e) => handleFormChange('total_amount', e.target.value)}
+                  error={!!formErrors.total_amount}
+                  helperText={formErrors.total_amount}
+                  InputProps={{ inputProps: { min: 0, step: 0.01 } }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Divider sx={{ my: 1 }} />
+              </Grid>
+              
+              {/* Description */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Job Description"
+                  value={formData.description}
+                  onChange={(e) => handleFormChange('description', e.target.value)}
+                  error={!!formErrors.description}
+                  helperText={formErrors.description}
+                />
+              </Grid>
+              
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Additional Notes"
+                  value={formData.notes}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                />
+              </Grid>
+            </Grid>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenDialog(false)}>
+          <Button variant="contained" onClick={handleSaveJob}>
             Save
           </Button>
         </DialogActions>

@@ -17,10 +17,20 @@ import {
   InputLabel,
   Chip,
   Box,
+  Tabs,
+  Tab,
+  IconButton,
+  Tooltip,
+  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Today as TodayIcon,
+  ViewWeek as ViewWeekIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  AccessTime as TimeIcon
 } from '@mui/icons-material';
 import {
   DndContext,
@@ -44,7 +54,7 @@ interface Job {
   title: string;
   customer_name: string;
   status: string;
-  priority: 'low' | 'normal' | 'high' | 'emergency';
+  priority: 'low' | 'medium' | 'high' | 'emergency';
   scheduled_date: string | null;
   scheduled_start_time: string | null;
   scheduled_end_time: string | null;
@@ -72,6 +82,10 @@ const SchedulingCalendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [weekDates, setWeekDates] = useState<string[]>([]);
+  const [weekStart, setWeekStart] = useState<Date>(new Date());
+  const [technicianColors, setTechnicianColors] = useState<Record<string, string>>({});
   const [unscheduledJobs, setUnscheduledJobs] = useState<Job[]>([]);
   const [openJobDialog, setOpenJobDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -81,7 +95,7 @@ const SchedulingCalendar: React.FC = () => {
     title: '',
     customer_name: '',
     service_type_name: '',
-    priority: 'normal' as 'low' | 'normal' | 'high' | 'emergency',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'emergency',
     estimated_duration: 2,
     description: ''
   });
@@ -120,44 +134,312 @@ const SchedulingCalendar: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setTechnicians(data);
+      } else {
+        // Demo technicians when API is not available
+        const demoTechnicians = [
+          {
+            id: "1",
+            full_name: "Mike Johnson",
+            skill_level: "Senior",
+            is_available: true,
+            employee_id: "T-101"
+          },
+          {
+            id: "2",
+            full_name: "Tom Wilson",
+            skill_level: "Journeyman",
+            is_available: true,
+            employee_id: "T-102"
+          },
+          {
+            id: "3",
+            full_name: "Steve Miller",
+            skill_level: "Apprentice",
+            is_available: true,
+            employee_id: "T-103"
+          }
+        ];
+        
+        setTechnicians(demoTechnicians);
       }
     } catch (error) {
       console.error('Error fetching technicians:', error);
+      
+      // Fallback to demo data
+      const demoTechnicians = [
+        {
+          id: "1",
+          full_name: "Mike Johnson",
+          skill_level: "Senior",
+          is_available: true,
+          employee_id: "T-101"
+        },
+        {
+          id: "2",
+          full_name: "Tom Wilson",
+          skill_level: "Journeyman",
+          is_available: true,
+          employee_id: "T-102"
+        },
+        {
+          id: "3",
+          full_name: "Steve Miller",
+          skill_level: "Apprentice",
+          is_available: true,
+          employee_id: "T-103"
+        }
+      ];
+      
+      setTechnicians(demoTechnicians);
     }
   };
 
+  // Generate color map for technicians
+  useEffect(() => {
+    const colors = [
+      '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5',
+      '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50',
+      '#8bc34a', '#cddc39', '#ffc107', '#ff9800', '#ff5722'
+    ];
+    
+    const colorMap: Record<string, string> = {};
+    technicians.forEach((tech, index) => {
+      colorMap[tech.id] = colors[index % colors.length];
+    });
+    
+    setTechnicianColors(colorMap);
+  }, [technicians]);
+  
+  // Generate array of dates for the week view
+  useEffect(() => {
+    const dates: string[] = [];
+    const currentDate = new Date(weekStart);
+    
+    // Set to the beginning of the week (Sunday)
+    currentDate.setDate(currentDate.getDate() - currentDate.getDay());
+    
+    // Generate 7 days (Sunday to Saturday)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(currentDate);
+      date.setDate(currentDate.getDate() + i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    setWeekDates(dates);
+  }, [weekStart]);
+  
   const fetchJobsCallback = React.useCallback(async () => {
     try {
-      // Fetch scheduled jobs for the selected date
-      const scheduledResponse = await fetch(
-        `http://localhost:8000/jobs/api/jobs/scheduling/?date_from=${selectedDate}&date_to=${selectedDate}`,
-        {
+      let dateFrom, dateTo;
+      
+      if (viewMode === 'week' && weekDates.length > 0) {
+        dateFrom = weekDates[0];
+        dateTo = weekDates[6];
+      } else {
+        dateFrom = selectedDate;
+        dateTo = selectedDate;
+      }
+      
+      // Try to fetch scheduled jobs for the selected date range
+      try {
+        const scheduledResponse = await fetch(
+          `http://localhost:8000/jobs/api/jobs/scheduling/?date_from=${dateFrom}&date_to=${dateTo}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        
+        if (scheduledResponse.ok) {
+          const scheduledData = await scheduledResponse.json();
+          setJobs(scheduledData);
+        } else {
+          // Demo data for testing when API is not available
+          const today = new Date();
+          const generateDate = (dayOffset: number) => {
+            const date = new Date(today);
+            date.setDate(date.getDate() + dayOffset);
+            return date.toISOString().split('T')[0];
+          };
+          
+          // Generate some sample jobs spread across the week
+          const demoJobs = [
+            {
+              id: "101",
+              job_number: "JOB-2024-0101",
+              title: "Panel Replacement",
+              customer_name: "John Smith",
+              status: "scheduled",
+              priority: "high" as const,
+              scheduled_date: generateDate(0),
+              scheduled_start_time: "09:00",
+              scheduled_end_time: "12:00",
+              assigned_technician: "1",
+              estimated_duration: 3,
+              service_type_name: "Panel Installation"
+            },
+            {
+              id: "102",
+              job_number: "JOB-2024-0102",
+              title: "Outlet Repair",
+              customer_name: "Sarah Davis",
+              status: "scheduled",
+              priority: "medium" as const,
+              scheduled_date: generateDate(0),
+              scheduled_start_time: "14:00",
+              scheduled_end_time: "15:30",
+              assigned_technician: "2",
+              estimated_duration: 1.5,
+              service_type_name: "Electrical Repair"
+            },
+            {
+              id: "103",
+              job_number: "JOB-2024-0103",
+              title: "Emergency Power Outage",
+              customer_name: "Robert Brown",
+              status: "scheduled",
+              priority: "emergency" as const,
+              scheduled_date: generateDate(1),
+              scheduled_start_time: "10:00",
+              scheduled_end_time: "13:00",
+              assigned_technician: "1",
+              estimated_duration: 3,
+              service_type_name: "Emergency Service"
+            },
+            {
+              id: "104",
+              job_number: "JOB-2024-0104",
+              title: "Lighting Installation",
+              customer_name: "Lisa Garcia",
+              status: "scheduled",
+              priority: "low" as const,
+              scheduled_date: generateDate(1),
+              scheduled_start_time: "15:00",
+              scheduled_end_time: "17:00",
+              assigned_technician: "3",
+              estimated_duration: 2,
+              service_type_name: "Lighting Installation"
+            },
+            {
+              id: "105",
+              job_number: "JOB-2024-0105",
+              title: "Ceiling Fan Installation",
+              customer_name: "Mark Johnson",
+              status: "scheduled",
+              priority: "medium" as const,
+              scheduled_date: generateDate(2),
+              scheduled_start_time: "09:00",
+              scheduled_end_time: "11:00",
+              assigned_technician: "2",
+              estimated_duration: 2,
+              service_type_name: "Installation"
+            },
+            {
+              id: "106",
+              job_number: "JOB-2024-0106",
+              title: "Wiring Upgrade",
+              customer_name: "Jennifer Wilson",
+              status: "scheduled",
+              priority: "high" as const,
+              scheduled_date: generateDate(3),
+              scheduled_start_time: "13:00",
+              scheduled_end_time: "17:00",
+              assigned_technician: "1",
+              estimated_duration: 4,
+              service_type_name: "Wiring Installation"
+            },
+            {
+              id: "107",
+              job_number: "JOB-2024-0107",
+              title: "Security Light Install",
+              customer_name: "David Miller",
+              status: "scheduled",
+              priority: "medium" as const,
+              scheduled_date: generateDate(4),
+              scheduled_start_time: "10:00",
+              scheduled_end_time: "12:00",
+              assigned_technician: "3",
+              estimated_duration: 2,
+              service_type_name: "Lighting Installation"
+            }
+          ];
+          
+          setJobs(demoJobs);
+        }
+      } catch (error) {
+        console.error('Error fetching scheduled jobs:', error);
+        // Fallback to demo data
+      }
+
+      // Try to fetch unscheduled jobs
+      try {
+        const unscheduledResponse = await fetch('http://localhost:8000/jobs/api/jobs/unscheduled/', {
           headers: {
             'Content-Type': 'application/json',
           },
+        });
+        
+        if (unscheduledResponse.ok) {
+          const unscheduledData = await unscheduledResponse.json();
+          setUnscheduledJobs(unscheduledData);
+        } else {
+          // Demo unscheduled jobs
+          const demoUnscheduledJobs = [
+            {
+              id: "201",
+              job_number: "JOB-2024-0201",
+              title: "Electric Vehicle Charger",
+              customer_name: "Thomas Edwards",
+              status: "pending",
+              priority: "high" as const,
+              scheduled_date: null,
+              scheduled_start_time: null,
+              scheduled_end_time: null,
+              assigned_technician: null,
+              estimated_duration: 4,
+              service_type_name: "Installation"
+            },
+            {
+              id: "202",
+              job_number: "JOB-2024-0202",
+              title: "Flickering Lights",
+              customer_name: "Emily Parker",
+              status: "pending",
+              priority: "medium" as const,
+              scheduled_date: null,
+              scheduled_start_time: null,
+              scheduled_end_time: null,
+              assigned_technician: null,
+              estimated_duration: 1,
+              service_type_name: "Electrical Repair"
+            },
+            {
+              id: "203",
+              job_number: "JOB-2024-0203",
+              title: "Hot Tub Wiring",
+              customer_name: "Kevin Thompson",
+              status: "pending",
+              priority: "low" as const,
+              scheduled_date: null,
+              scheduled_start_time: null,
+              scheduled_end_time: null,
+              assigned_technician: null,
+              estimated_duration: 5,
+              service_type_name: "Wiring Installation"
+            }
+          ];
+          
+          setUnscheduledJobs(demoUnscheduledJobs);
         }
-      );
-      
-      if (scheduledResponse.ok) {
-        const scheduledData = await scheduledResponse.json();
-        setJobs(scheduledData);
-      }
-
-      // Fetch unscheduled jobs
-      const unscheduledResponse = await fetch('http://localhost:8000/jobs/api/jobs/unscheduled/', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (unscheduledResponse.ok) {
-        const unscheduledData = await unscheduledResponse.json();
-        setUnscheduledJobs(unscheduledData);
+      } catch (error) {
+        console.error('Error fetching unscheduled jobs:', error);
+        // Handle error
       }
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error in job fetching process:', error);
     }
-  }, [selectedDate]);
+  }, [selectedDate, viewMode, weekDates]);
 
   useEffect(() => {
     fetchJobsCallback();
@@ -203,6 +485,18 @@ const SchedulingCalendar: React.FC = () => {
         ? overId.split('-time-')[1] 
         : '09:00';
       
+      // Determine which date to use (selected date or a date from the week view)
+      let scheduleDate = selectedDate;
+      
+      // For week view, check if the container has a date attribute
+      if (viewMode === 'week') {
+        // Extract date from the over.id if available, otherwise use selected date
+        const dateMatch = overId.match(/date-(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch && dateMatch[1]) {
+          scheduleDate = dateMatch[1];
+        }
+      }
+      
       try {
         await fetch(`http://localhost:8000/jobs/api/jobs/${active.id}/assign_technician/`, {
           method: 'POST',
@@ -211,10 +505,36 @@ const SchedulingCalendar: React.FC = () => {
           },
           body: JSON.stringify({
             technician_id: technicianId,
-            scheduled_date: selectedDate,
+            scheduled_date: scheduleDate,
             scheduled_start_time: timeSlot,
           }),
         });
+        
+        // Demo mode fallback - normally this would be handled by the API
+        if (window.location.hostname === 'localhost') {
+          // Demo update - simulate API response
+          const job = unscheduledJobs.find(j => j.id === active.id) || 
+                     jobs.find(j => j.id === active.id);
+                     
+          if (job) {
+            const updatedJob = {
+              ...job,
+              assigned_technician: technicianId,
+              scheduled_date: scheduleDate,
+              scheduled_start_time: timeSlot,
+              // Calculate end time based on duration
+              scheduled_end_time: calculateEndTime(timeSlot, job.estimated_duration)
+            };
+            
+            // Update local state to simulate API response
+            if (unscheduledJobs.some(j => j.id === job.id)) {
+              setUnscheduledJobs(prev => prev.filter(j => j.id !== job.id));
+              setJobs(prev => [...prev, updatedJob]);
+            } else {
+              setJobs(prev => prev.map(j => j.id === job.id ? updatedJob : j));
+            }
+          }
+        }
         
         fetchJobsCallback(); // Refresh data
       } catch (error) {
@@ -222,12 +542,28 @@ const SchedulingCalendar: React.FC = () => {
       }
     }
   };
+  
+  // Helper function to calculate end time
+  const calculateEndTime = (startTime: string, durationHours: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    let endHours = hours + Math.floor(durationHours);
+    const endMinutes = minutes + Math.round((durationHours % 1) * 60);
+    
+    if (endMinutes >= 60) {
+      endHours += 1;
+    }
+    
+    const formattedHours = String(endHours % 24).padStart(2, '0');
+    const formattedMinutes = String(endMinutes % 60).padStart(2, '0');
+    
+    return `${formattedHours}:${formattedMinutes}`;
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'emergency': return '#f44336';
       case 'high': return '#ff9800';
-      case 'normal': return '#2196f3';
+      case 'medium': return '#2196f3';
       case 'low': return '#4caf50';
       default: return '#9e9e9e';
     }
@@ -300,40 +636,139 @@ const SchedulingCalendar: React.FC = () => {
     );
   };
 
+  // Navigate to previous/next week
+  const navigatePreviousWeek = () => {
+    const newWeekStart = new Date(weekStart);
+    newWeekStart.setDate(newWeekStart.getDate() - 7);
+    setWeekStart(newWeekStart);
+  };
+  
+  const navigateNextWeek = () => {
+    const newWeekStart = new Date(weekStart);
+    newWeekStart.setDate(newWeekStart.getDate() + 7);
+    setWeekStart(newWeekStart);
+  };
+  
+  // Set today as selected date and adjust week view
+  const goToToday = () => {
+    const today = new Date();
+    setSelectedDate(today.toISOString().split('T')[0]);
+    setWeekStart(today);
+  };
+  
+  // Format date for display
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+  
+  // Get technician color
+  const getTechnicianColor = (techId: string | null) => {
+    if (!techId || !technicianColors[techId]) return '#9e9e9e';
+    return technicianColors[techId];
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
         📅 Job Scheduling Calendar
       </Typography>
       
-      {/* Date Selector */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          type="date"
-          label="Schedule Date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setIsCreatingJob(true);
-            setSelectedJob(null);
-            setNewJobData({
-              title: '',
-              customer_name: '',
-              service_type_name: '',
-              priority: 'normal',
-              estimated_duration: 2,
-              description: ''
-            });
-            setOpenJobDialog(true);
-          }}
-        >
-          Create Job
-        </Button>
+      {/* View selector and date controls */}
+      <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tabs 
+              value={viewMode} 
+              onChange={(_, newValue) => setViewMode(newValue)}
+              sx={{ minHeight: 'auto' }}
+            >
+              <Tab 
+                icon={<TodayIcon />} 
+                label="Day" 
+                value="day" 
+                sx={{ minHeight: 'auto', py: 1 }} 
+              />
+              <Tab 
+                icon={<ViewWeekIcon />} 
+                label="Week" 
+                value="week" 
+                sx={{ minHeight: 'auto', py: 1 }} 
+              />
+            </Tabs>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton onClick={navigatePreviousWeek}>
+              <ChevronLeftIcon />
+            </IconButton>
+            
+            <Button 
+              variant="outlined" 
+              size="small"
+              onClick={goToToday}
+            >
+              Today
+            </Button>
+            
+            <IconButton onClick={navigateNextWeek}>
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+          
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setIsCreatingJob(true);
+              setSelectedJob(null);
+              setNewJobData({
+                title: '',
+                customer_name: '',
+                service_type_name: '',
+                priority: 'medium',
+                estimated_duration: 2,
+                description: ''
+              });
+              setOpenJobDialog(true);
+            }}
+          >
+            Create Job
+          </Button>
+        </Box>
+        
+        {viewMode === 'day' ? (
+          <TextField
+            type="date"
+            label="Schedule Date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+          />
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+            {weekDates.map((date) => (
+              <Box 
+                key={date} 
+                sx={{ 
+                  textAlign: 'center',
+                  flex: 1,
+                  p: 1,
+                  borderRadius: 1,
+                  backgroundColor: date === selectedDate ? 'primary.light' : 'transparent',
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: date === selectedDate ? 'primary.light' : 'action.hover' }
+                }}
+                onClick={() => setSelectedDate(date)}
+              >
+                <Typography variant="body2" fontWeight={date === selectedDate ? 'bold' : 'normal'}>
+                  {formatDate(date)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
       </Box>
 
       <DndContext
@@ -366,80 +801,221 @@ const SchedulingCalendar: React.FC = () => {
 
           {/* Technician Schedules */}
           <Grid item xs={12} md={9}>
-            <Grid container spacing={1}>
-              {technicians.map((technician) => (
-                <Grid item xs={12} sm={6} md={4} key={technician.id}>
-                  <Card>
-                    <CardHeader
-                      title={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PersonIcon fontSize="small" />
-                          <Typography variant="subtitle1">
-                            {technician.full_name}
-                          </Typography>
-                        </Box>
-                      }
-                      subheader={
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Chip
-                            label={technician.skill_level}
-                            size="small"
-                            color="primary"
-                          />
-                          <Chip
-                            label={technician.employee_id}
-                            size="small"
-                            variant="outlined"
-                          />
-                        </Box>
-                      }
-                    />
-                    <CardContent sx={{ padding: '8px !important' }}>
-                      {timeSlots.map((slot, slotIndex) => (
-                        <Box
-                          key={`${technician.id}-${slot.time}`}
-                          id={`technician-${technician.id}-time-${slot.time}`}
-                          sx={{
-                            minHeight: 40,
-                            border: '1px solid #e0e0e0',
-                            borderRadius: 1,
-                            margin: '2px 0',
-                            padding: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            position: 'relative',
-                            '&:hover': {
-                              backgroundColor: '#f5f5f5'
-                            }
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
+            {viewMode === 'day' ? (
+              <Grid container spacing={1}>
+                {technicians.map((technician) => (
+                  <Grid item xs={12} sm={6} md={4} key={technician.id}>
+                    <Card>
+                      <CardHeader
+                        title={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <PersonIcon fontSize="small" />
+                            <Typography variant="subtitle1">
+                              {technician.full_name}
+                            </Typography>
+                          </Box>
+                        }
+                        subheader={
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Chip
+                              label={technician.skill_level}
+                              size="small"
+                              color="primary"
+                              sx={{ backgroundColor: getTechnicianColor(technician.id) }}
+                            />
+                            <Chip
+                              label={technician.employee_id}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Box>
+                        }
+                      />
+                      <CardContent sx={{ padding: '8px !important' }}>
+                        {timeSlots.map((slot, slotIndex) => (
+                          <Box
+                            key={`${technician.id}-${slot.time}`}
+                            id={`technician-${technician.id}-time-${slot.time}`}
                             sx={{
-                              position: 'absolute',
-                              left: 4,
-                              top: 2,
-                              fontSize: '0.7rem',
-                              color: 'text.secondary'
+                              minHeight: 40,
+                              border: '1px solid #e0e0e0',
+                              borderRadius: 1,
+                              margin: '2px 0',
+                              padding: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              position: 'relative',
+                              '&:hover': {
+                                backgroundColor: '#f5f5f5'
+                              }
                             }}
                           >
-                            {slot.time}
-                          </Typography>
-                          
-                          <Box sx={{ ml: 6, width: '100%' }}>
-                            {slot.jobs
-                              .filter(job => job.assigned_technician === technician.id)
-                              .map((job) => (
-                                <SortableJobCard key={job.id} job={job} />
-                              ))}
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                position: 'absolute',
+                                left: 4,
+                                top: 2,
+                                fontSize: '0.7rem',
+                                color: 'text.secondary'
+                              }}
+                            >
+                              {slot.time}
+                            </Typography>
+                            
+                            <Box sx={{ ml: 6, width: '100%' }}>
+                              {slot.jobs
+                                .filter(job => job.assigned_technician === technician.id)
+                                .map((job) => (
+                                  <SortableJobCard key={job.id} job={job} />
+                                ))}
+                            </Box>
                           </Box>
-                        </Box>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              // Week view
+              <Paper elevation={2} sx={{ p: 2, overflow: 'auto' }}>
+                <Box sx={{ minWidth: 900 }}>
+                  {/* Header row with technicians */}
+                  <Box sx={{ display: 'flex', borderBottom: '1px solid #e0e0e0', pb: 1, mb: 1 }}>
+                    <Box sx={{ width: 80, flexShrink: 0 }}>
+                      <TimeIcon color="action" sx={{ mt: 1 }} />
+                    </Box>
+                    {technicians.map(technician => (
+                      <Box 
+                        key={technician.id}
+                        sx={{ 
+                          flex: 1, 
+                          textAlign: 'center', 
+                          px: 1,
+                          borderLeft: '1px solid #e0e0e0',
+                        }}
+                      >
+                        <Tooltip title={technician.skill_level}>
+                          <Chip
+                            label={technician.full_name}
+                            size="small"
+                            sx={{ 
+                              backgroundColor: getTechnicianColor(technician.id),
+                              color: 'white',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        </Tooltip>
+                      </Box>
+                    ))}
+                  </Box>
+                  
+                  {/* Time slots */}
+                  {timeSlots.map((slot) => (
+                    <Box 
+                      key={slot.time}
+                      sx={{ 
+                        display: 'flex', 
+                        borderBottom: '1px solid #f0f0f0',
+                        minHeight: 80,
+                        '&:hover': { backgroundColor: '#f9f9f9' }
+                      }}
+                    >
+                      {/* Time column */}
+                      <Box 
+                        sx={{ 
+                          width: 80, 
+                          py: 1, 
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRight: '1px solid #e0e0e0',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Typography variant="body2">{slot.time}</Typography>
+                      </Box>
+                      
+                      {/* Technician slots */}
+                      {technicians.map(technician => {
+                        // Filter jobs for this technician in this time slot across all week days
+                        const techJobs = jobs.filter(job => 
+                          job.assigned_technician === technician.id && 
+                          job.scheduled_start_time === slot.time
+                        );
+                        
+                        return (
+                          <Box 
+                            key={`${technician.id}-${slot.time}`}
+                            id={`technician-${technician.id}-time-${slot.time}`}
+                            sx={{ 
+                              flex: 1,
+                              borderLeft: '1px solid #e0e0e0',
+                              p: 1,
+                              position: 'relative'
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {techJobs.map(job => {
+                                // Check if this job is for the current selected date or another day in the week
+                                const isSelectedDate = job.scheduled_date === selectedDate;
+                                
+                                return (
+                                  <Tooltip 
+                                    key={job.id} 
+                                    title={`${job.customer_name} - ${formatDate(job.scheduled_date || '')}`}
+                                  >
+                                    <Box
+                                      sx={{
+                                        borderRadius: 1,
+                                        p: 0.5,
+                                        backgroundColor: isSelectedDate ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+                                        border: `2px solid ${getPriorityColor(job.priority)}`,
+                                        cursor: 'pointer',
+                                        '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.2)' },
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        width: 'calc(100% - 4px)',
+                                        position: 'relative'
+                                      }}
+                                      onClick={() => {
+                                        setSelectedJob(job);
+                                        setIsCreatingJob(false);
+                                        setOpenJobDialog(true);
+                                      }}
+                                    >
+                                      <Typography variant="caption" fontWeight="bold" noWrap>
+                                        {job.title}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary" noWrap>
+                                        {job.customer_name}
+                                      </Typography>
+                                      <Box sx={{ position: 'absolute', right: 2, top: 2 }}>
+                                        <Chip 
+                                          label={job.priority} 
+                                          size="small" 
+                                          sx={{ 
+                                            height: 16, 
+                                            fontSize: '0.6rem',
+                                            backgroundColor: getPriorityColor(job.priority),
+                                            color: 'white'
+                                          }}
+                                        />
+                                      </Box>
+                                    </Box>
+                                  </Tooltip>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            )}
           </Grid>
         </Grid>
         <DragOverlay>
@@ -519,7 +1095,7 @@ const SchedulingCalendar: React.FC = () => {
                     onChange={(e) => setNewJobData({...newJobData, priority: e.target.value as any})}
                   >
                     <MenuItem value="low">Low</MenuItem>
-                    <MenuItem value="normal">Normal</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
                     <MenuItem value="high">High</MenuItem>
                     <MenuItem value="emergency">Emergency</MenuItem>
                   </Select>
@@ -617,7 +1193,7 @@ const SchedulingCalendar: React.FC = () => {
                       customer: 1, // Default to first customer for demo
                       property: 1, // Default to first property for demo
                       service_type: 1, // Default to first service type for demo
-                      priority: newJobData.priority,
+                      priority: newJobData.priority as 'low' | 'medium' | 'high' | 'emergency',
                       status: 'pending'
                     }),
                   });
