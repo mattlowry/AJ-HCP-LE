@@ -122,6 +122,18 @@ export const jobApi = {
     api.patch(`/jobs/${id}/assign_technicians/`, { technician_ids }),
 };
 
+// Technician API
+export const technicianApi = {
+  getAll: (params?: any): Promise<{ data: any[] }> =>
+    api.get('/jobs/technicians/', { params }),
+  
+  getAvailable: (params?: any): Promise<{ data: any[] }> =>
+    api.get('/jobs/technicians/available/', { params }),
+  
+  getById: (id: number): Promise<{ data: any }> =>
+    api.get(`/jobs/technicians/${id}/`),
+};
+
 // Billing API
 export const billingApi = {
   // Invoice endpoints

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jobApi } from '../services/api';
+import { Job } from '../types/job';
 import {
   Box,
   Typography,
@@ -39,22 +41,7 @@ import {
   Search as SearchIcon
 } from '@mui/icons-material';
 
-interface Job {
-  id: number;
-  job_number: string;
-  customer_name: string;
-  property_address: string;
-  service_type: string;
-  status: string;
-  priority: string;
-  scheduled_date: string;
-  assigned_technician: string;
-  description: string;
-  estimated_duration: number;
-  total_amount: number;
-  created_at: string;
-  notes?: string;
-}
+// Using Job interface from types/job.ts
 
 interface Customer {
   id: number;
@@ -108,78 +95,114 @@ const JobList: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Demo data
-  const demoJobs: Job[] = [
+  // Demo data - structured to match Job interface
+  const demoJobs: any[] = [
     {
       id: 1,
       job_number: 'JOB-2024-0001',
+      title: 'Kitchen Outlet Repair',
       customer_name: 'John Smith',
       property_address: '123 Main St, Anytown, NY 12345',
       service_type: 'Electrical Repair',
-      status: 'scheduled',
-      priority: 'high',
+      status: 'scheduled' as const,
+      priority: 'high' as const,
       scheduled_date: '2024-01-15T09:00:00Z',
+      scheduled_start: '2024-01-15T09:00:00Z',
       assigned_technician: 'Mike Johnson',
+      assigned_technicians: ['Mike Johnson'],
       description: 'Kitchen outlet not working - needs inspection',
       estimated_duration: 2,
+      estimated_cost: 150.00,
       total_amount: 150.00,
-      created_at: '2024-01-10T08:00:00Z'
+      created_at: '2024-01-10T08:00:00Z',
+      updated_at: '2024-01-10T08:00:00Z',
+      customer: 1,
+      property: 1,
+      assigned_to: [1]
     },
     {
       id: 2,
       job_number: 'JOB-2024-0002',
+      title: 'Panel Installation',
       customer_name: 'Sarah Davis',
       property_address: '456 Oak Ave, Somewhere, NY 12346',
       service_type: 'Panel Installation',
-      status: 'in_progress',
-      priority: 'medium',
+      status: 'in_progress' as const,
+      priority: 'medium' as const,
       scheduled_date: '2024-01-14T14:00:00Z',
+      scheduled_start: '2024-01-14T14:00:00Z',
       assigned_technician: 'Tom Wilson',
+      assigned_technicians: ['Tom Wilson'],
       description: 'Install new 200A electrical panel',
       estimated_duration: 6,
+      estimated_cost: 800.00,
       total_amount: 800.00,
-      created_at: '2024-01-08T10:30:00Z'
+      created_at: '2024-01-08T10:30:00Z',
+      updated_at: '2024-01-08T10:30:00Z',
+      customer: 2,
+      property: 2,
+      assigned_to: [2]
     },
     {
       id: 3,
       job_number: 'JOB-2024-0003',
+      title: 'Emergency Power Restoration',
       customer_name: 'Robert Brown',
       property_address: '789 Pine St, Elsewhere, NY 12347',
       service_type: 'Emergency Service',
-      status: 'completed',
-      priority: 'emergency',
+      status: 'completed' as const,
+      priority: 'emergency' as const,
       scheduled_date: '2024-01-12T16:00:00Z',
+      scheduled_start: '2024-01-12T16:00:00Z',
       assigned_technician: 'Mike Johnson',
+      assigned_technicians: ['Mike Johnson'],
       description: 'Power outage in entire house',
       estimated_duration: 3,
+      estimated_cost: 450.00,
       total_amount: 450.00,
-      created_at: '2024-01-12T15:30:00Z'
+      created_at: '2024-01-12T15:30:00Z',
+      updated_at: '2024-01-12T15:30:00Z',
+      customer: 3,
+      property: 3,
+      assigned_to: [1]
     },
     {
       id: 4,
       job_number: 'JOB-2024-0004',
+      title: 'Garage Workshop Wiring',
       customer_name: 'Lisa Garcia',
       property_address: '321 Elm Dr, Newtown, NY 12348',
       service_type: 'Wiring Installation',
-      status: 'pending',
-      priority: 'low',
+      status: 'pending' as const,
+      priority: 'low' as const,
       scheduled_date: '2024-01-18T11:00:00Z',
+      scheduled_start: '2024-01-18T11:00:00Z',
       assigned_technician: 'Tom Wilson',
+      assigned_technicians: ['Tom Wilson'],
       description: 'Wire new garage workshop',
       estimated_duration: 8,
+      estimated_cost: 1200.00,
       total_amount: 1200.00,
-      created_at: '2024-01-09T14:15:00Z'
+      created_at: '2024-01-09T14:15:00Z',
+      updated_at: '2024-01-09T14:15:00Z',
+      customer: 4,
+      property: 4,
+      assigned_to: [2]
     }
   ];
 
   const loadJobs = async () => {
     try {
       setLoading(true);
-      // For demo, use local data
-      setJobs(demoJobs);
+      setError('');
+      const response = await jobApi.getAll();
+      setJobs(response.data.results);
       setLoading(false);
     } catch (err) {
-      setError('Failed to load jobs');
+      console.error('Error loading jobs:', err);
+      setError('Failed to load jobs. Using demo data.');
+      // Fallback to demo data if API fails
+      setJobs(demoJobs);
       setLoading(false);
     }
   };
@@ -235,9 +258,11 @@ const JobList: React.FC = () => {
   };
 
   const filteredJobs = jobs.filter(job => {
+    const customerName = job.customer_name || '';
+    const serviceType = job.service_type || job.title || '';
     const matchesSearch = job.job_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.service_type.toLowerCase().includes(searchTerm.toLowerCase());
+                         customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         serviceType.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === '' || job.status === statusFilter;
     const matchesPriority = priorityFilter === '' || job.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -529,13 +554,13 @@ const JobList: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <Box>
-                    <Typography variant="body2">{job.customer_name}</Typography>
+                    <Typography variant="body2">{job.customer_name || 'N/A'}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {job.property_address}
+                      {job.property_address || 'N/A'}
                     </Typography>
                   </Box>
                 </TableCell>
-                <TableCell>{job.service_type}</TableCell>
+                <TableCell>{job.service_type || job.title || 'N/A'}</TableCell>
                 <TableCell>
                   <Chip
                     label={job.status.replace('_', ' ')}
@@ -554,11 +579,14 @@ const JobList: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {new Date(job.scheduled_date).toLocaleDateString()} {' '}
-                  {new Date(job.scheduled_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  {(job.scheduled_date || job.scheduled_start) ? 
+                    new Date(job.scheduled_date || job.scheduled_start).toLocaleDateString() + ' ' +
+                    new Date(job.scheduled_date || job.scheduled_start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    : 'Not scheduled'
+                  }
                 </TableCell>
-                <TableCell>{job.assigned_technician}</TableCell>
-                <TableCell>${job.total_amount.toFixed(2)}</TableCell>
+                <TableCell>{job.assigned_technician || (job.assigned_technicians && job.assigned_technicians.length > 0 ? job.assigned_technicians.join(', ') : 'Unassigned')}</TableCell>
+                <TableCell>${(job.total_amount || job.estimated_cost || 0).toFixed(2)}</TableCell>
                 <TableCell>
                   <Box display="flex" gap={1}>
                     <IconButton

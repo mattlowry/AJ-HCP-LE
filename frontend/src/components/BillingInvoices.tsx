@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { billingApi } from '../services/api';
 import {
   Box,
   Typography,
@@ -190,13 +191,26 @@ const BillingInvoices: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      // For demo, use local data
+      setError('');
+      
+      // Load real data from API
+      const [invoicesResponse, estimatesResponse, paymentsResponse] = await Promise.all([
+        billingApi.getInvoices(),
+        billingApi.getEstimates(),
+        billingApi.getPayments()
+      ]);
+      
+      setInvoices(invoicesResponse.data.results);
+      setEstimates(estimatesResponse.data.results);
+      setPayments(paymentsResponse.data.results);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading billing data:', err);
+      setError('Failed to load billing data. Using demo data.');
+      // Fallback to demo data if API fails
       setInvoices(demoInvoices);
       setEstimates(demoEstimates);
       setPayments(demoPayments);
-      setLoading(false);
-    } catch (err) {
-      setError('Failed to load billing data');
       setLoading(false);
     }
   };

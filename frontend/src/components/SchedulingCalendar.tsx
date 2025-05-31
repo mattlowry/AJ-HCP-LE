@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { jobApi, schedulingApi, technicianApi } from '../services/api';
 import {
   Card,
   CardContent,
@@ -125,47 +126,12 @@ const SchedulingCalendar: React.FC = () => {
 
   const fetchTechnicians = async () => {
     try {
-      const response = await fetch('http://localhost:8000/jobs/api/technicians/available/', {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTechnicians(data);
-      } else {
-        // Demo technicians when API is not available
-        const demoTechnicians = [
-          {
-            id: "1",
-            full_name: "Mike Johnson",
-            skill_level: "Senior",
-            is_available: true,
-            employee_id: "T-101"
-          },
-          {
-            id: "2",
-            full_name: "Tom Wilson",
-            skill_level: "Journeyman",
-            is_available: true,
-            employee_id: "T-102"
-          },
-          {
-            id: "3",
-            full_name: "Steve Miller",
-            skill_level: "Apprentice",
-            is_available: true,
-            employee_id: "T-103"
-          }
-        ];
-        
-        setTechnicians(demoTechnicians);
-      }
+      const response = await technicianApi.getAvailable();
+      setTechnicians(response.data);
     } catch (error) {
       console.error('Error fetching technicians:', error);
       
-      // Fallback to demo data
+      // Fallback to demo data only if API completely fails
       const demoTechnicians = [
         {
           id: "1",
@@ -242,19 +208,14 @@ const SchedulingCalendar: React.FC = () => {
       
       // Try to fetch scheduled jobs for the selected date range
       try {
-        const scheduledResponse = await fetch(
-          `http://localhost:8000/jobs/api/jobs/scheduling/?date_from=${dateFrom}&date_to=${dateTo}`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const scheduledResponse = await jobApi.getAll({
+          date_from: dateFrom,
+          date_to: dateTo,
+          status: 'scheduled'
+        });
         
-        if (scheduledResponse.ok) {
-          const scheduledData = await scheduledResponse.json();
-          setJobs(scheduledData);
-        } else {
+        setJobs(scheduledResponse.data.results);
+      } catch (apiError) {
           // Demo data for testing when API is not available
           const today = new Date();
           const generateDate = (dayOffset: number) => {
@@ -374,16 +335,12 @@ const SchedulingCalendar: React.FC = () => {
 
       // Try to fetch unscheduled jobs
       try {
-        const unscheduledResponse = await fetch('http://localhost:8000/jobs/api/jobs/unscheduled/', {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const unscheduledResponse = await jobApi.getAll({
+          status: 'pending'
         });
         
-        if (unscheduledResponse.ok) {
-          const unscheduledData = await unscheduledResponse.json();
-          setUnscheduledJobs(unscheduledData);
-        } else {
+        setUnscheduledJobs(unscheduledResponse.data.results);
+      } catch (unscheduledError) {
           // Demo unscheduled jobs
           const demoUnscheduledJobs = [
             {
@@ -498,45 +455,15 @@ const SchedulingCalendar: React.FC = () => {
       }
       
       try {
-        await fetch(`http://localhost:8000/jobs/api/jobs/${active.id}/assign_technician/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            technician_id: technicianId,
-            scheduled_date: scheduleDate,
-            scheduled_start_time: timeSlot,
-          }),
+        // Update job with scheduling information
+        await jobApi.update(parseInt(active.id), {
+          assigned_to: [parseInt(technicianId)],
+          scheduled_start: `${scheduleDate}T${timeSlot}:00`,
+          status: 'scheduled'
         });
         
-        // Demo mode fallback - normally this would be handled by the API
-        if (window.location.hostname === 'localhost') {
-          // Demo update - simulate API response
-          const job = unscheduledJobs.find(j => j.id === active.id) || 
-                     jobs.find(j => j.id === active.id);
-                     
-          if (job) {
-            const updatedJob = {
-              ...job,
-              assigned_technician: technicianId,
-              scheduled_date: scheduleDate,
-              scheduled_start_time: timeSlot,
-              // Calculate end time based on duration
-              scheduled_end_time: calculateEndTime(timeSlot, job.estimated_duration)
-            };
-            
-            // Update local state to simulate API response
-            if (unscheduledJobs.some(j => j.id === job.id)) {
-              setUnscheduledJobs(prev => prev.filter(j => j.id !== job.id));
-              setJobs(prev => [...prev, updatedJob]);
-            } else {
-              setJobs(prev => prev.map(j => j.id === job.id ? updatedJob : j));
-            }
-          }
-        }
-        
-        fetchJobsCallback(); // Refresh data
+        // Refresh data to get updated job information
+        fetchJobsCallback();
       } catch (error) {
         console.error('Error assigning job:', error);
       }
@@ -1181,30 +1108,22 @@ const SchedulingCalendar: React.FC = () => {
               onClick={async () => {
                 try {
                   // Create a new job via the backend API
-                  const response = await fetch('http://localhost:8000/jobs/api/jobs/', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      job_number: `JOB-${Date.now()}`,
-                      title: newJobData.title,
-                      description: newJobData.description,
-                      customer: 1, // Default to first customer for demo
-                      property: 1, // Default to first property for demo
-                      service_type: 1, // Default to first service type for demo
-                      priority: newJobData.priority as 'low' | 'medium' | 'high' | 'emergency',
-                      status: 'pending'
-                    }),
+                  const newJob = await jobApi.create({
+                    job_number: `JOB-${Date.now()}`,
+                    title: newJobData.title,
+                    description: newJobData.description,
+                    customer: 1, // Default to first customer - should be dynamic in production
+                    property: 1, // Default to first property - should be dynamic in production
+                    service_type: newJobData.service_type_name || 'General Service',
+                    priority: newJobData.priority as 'low' | 'medium' | 'high' | 'emergency',
+                    status: 'pending',
+                    estimated_duration: 2,
+                    estimated_cost: 100,
+                    assigned_to: []
                   });
                   
-                  if (response.ok) {
-                    alert('Job created successfully!');
-                    fetchJobsCallback(); // Refresh the job list
-                  } else {
-                    alert('Error creating job. Using demo mode.');
-                    console.log('Demo job created:', newJobData);
-                  }
+                  alert('Job created successfully!');
+                  fetchJobsCallback(); // Refresh the job list
                   
                   setOpenJobDialog(false);
                   setIsCreatingJob(false);
