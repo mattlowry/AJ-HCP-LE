@@ -28,11 +28,10 @@ import {
   InputLabel,
   Select,
   FormHelperText,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
-// Temporarily disabled date picker imports
-// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-// import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+// Using native datetime-local for better compatibility
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -68,6 +67,7 @@ const JobList: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -363,6 +363,7 @@ const JobList: React.FC = () => {
   const handleSaveJob = async () => {
     try {
       if (!validateForm()) return;
+      setSubmitting(true);
       
       // Find related objects by ID
       const customer = customers.find(c => c.id.toString() === formData.customer_id);
@@ -404,15 +405,18 @@ const JobList: React.FC = () => {
         setJobs([...jobs, newJob]);
       }
       setOpenDialog(false);
+      setSubmitting(false);
     } catch (err) {
       setError('Failed to save job');
+      setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <Typography>Loading jobs...</Typography>
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={40} sx={{ mb: 2 }} />
+        <Typography variant="h6" color="textSecondary">Loading jobs...</Typography>
       </Box>
     );
   }
@@ -733,15 +737,22 @@ const JobList: React.FC = () => {
                 </FormControl>
               </Grid>
               
-              {/* Scheduled Date/Time - Temporarily using basic input */}
+              {/* Scheduled Date/Time */}
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Scheduled Date & Time"
                   type="datetime-local"
-                  value={formData.scheduled_date}
-                  onChange={(e) => handleFormChange('scheduled_date', e.target.value)}
+                  value={formData.scheduled_date ? 
+                    new Date(formData.scheduled_date).toISOString().slice(0, 16) : 
+                    ''
+                  }
+                  onChange={(e) => {
+                    const dateValue = e.target.value ? new Date(e.target.value).toISOString() : '';
+                    handleFormChange('scheduled_date', dateValue);
+                  }}
                   InputLabelProps={{ shrink: true }}
+                  helperText="Select date and time for the job"
                 />
               </Grid>
               
@@ -826,8 +837,12 @@ const JobList: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSaveJob}>
-            Save
+          <Button 
+            variant="contained" 
+            onClick={handleSaveJob}
+            disabled={submitting}
+          >
+            {submitting ? <CircularProgress size={20} /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

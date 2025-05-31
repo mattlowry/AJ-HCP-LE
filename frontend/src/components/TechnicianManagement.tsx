@@ -24,10 +24,6 @@ import {
   DialogActions,
   MenuItem,
   Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
   Divider,
 } from '@mui/material';
 import {
@@ -35,11 +31,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  Work as WorkIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 
 interface Technician {

@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { Customer, CustomerListItem, Property, CustomerContact, CustomerReview } from '../types/customer';
 import { Job, JobListItem } from '../types/job';
-import { Invoice, Estimate, Payment, InvoiceLineItem, EstimateLineItem } from '../types/billing';
-import { Item, Category, Supplier, StockMovement, PurchaseOrder, PurchaseOrderLineItem } from '../types/inventory';
+import { Invoice, Estimate, Payment } from '../types/billing';
+import { Item, Category, Supplier, StockMovement, PurchaseOrder } from '../types/inventory';
 import { Appointment, TechnicianAvailability, ScheduleConflict } from '../types/scheduling';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';

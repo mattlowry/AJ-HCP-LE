@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { jobApi, schedulingApi, technicianApi } from '../services/api';
+import { jobApi, technicianApi } from '../services/api';
 import {
   Card,
   CardContent,
@@ -23,6 +23,8 @@ import {
   IconButton,
   Tooltip,
   Paper,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -80,6 +82,8 @@ interface TimeSlot {
 const SchedulingCalendar: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -126,10 +130,12 @@ const SchedulingCalendar: React.FC = () => {
 
   const fetchTechnicians = async () => {
     try {
+      setError(null);
       const response = await technicianApi.getAvailable();
       setTechnicians(response.data);
     } catch (error) {
       console.error('Error fetching technicians:', error);
+      setError('Failed to load technicians');
       
       // Fallback to demo data only if API completely fails
       const demoTechnicians = [
@@ -195,27 +201,30 @@ const SchedulingCalendar: React.FC = () => {
   }, [weekStart]);
   
   const fetchJobsCallback = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    let dateFrom, dateTo;
+    
+    if (viewMode === 'week' && weekDates.length > 0) {
+      dateFrom = weekDates[0];
+      dateTo = weekDates[6];
+    } else {
+      dateFrom = selectedDate;
+      dateTo = selectedDate;
+    }
+    
+    // Fetch scheduled jobs
     try {
-      let dateFrom, dateTo;
+      const scheduledResponse = await jobApi.getAll({
+        date_from: dateFrom,
+        date_to: dateTo,
+        status: 'scheduled'
+      });
       
-      if (viewMode === 'week' && weekDates.length > 0) {
-        dateFrom = weekDates[0];
-        dateTo = weekDates[6];
-      } else {
-        dateFrom = selectedDate;
-        dateTo = selectedDate;
-      }
-      
-      // Try to fetch scheduled jobs for the selected date range
-      try {
-        const scheduledResponse = await jobApi.getAll({
-          date_from: dateFrom,
-          date_to: dateTo,
-          status: 'scheduled'
-        });
-        
-        setJobs(scheduledResponse.data.results);
-      } catch (apiError) {
+      setJobs(scheduledResponse.data.results);
+    } catch (scheduledError) {
+      console.error('Error fetching scheduled jobs:', scheduledError);
           // Demo data for testing when API is not available
           const today = new Date();
           const generateDate = (dayOffset: number) => {
@@ -326,23 +335,21 @@ const SchedulingCalendar: React.FC = () => {
             }
           ];
           
-          setJobs(demoJobs);
-        }
-      } catch (error) {
-        console.error('Error fetching scheduled jobs:', error);
-        // Fallback to demo data
-      }
-
-      // Try to fetch unscheduled jobs
-      try {
-        const unscheduledResponse = await jobApi.getAll({
-          status: 'pending'
-        });
-        
-        setUnscheduledJobs(unscheduledResponse.data.results);
-      } catch (unscheduledError) {
-          // Demo unscheduled jobs
-          const demoUnscheduledJobs = [
+      setJobs(demoJobs);
+    }
+    
+    // Fetch unscheduled jobs
+    try {
+      const unscheduledResponse = await jobApi.getAll({
+        status: 'pending'
+      });
+      
+      setUnscheduledJobs(unscheduledResponse.data.results);
+    } catch (unscheduledError) {
+      console.error('Error fetching unscheduled jobs:', unscheduledError);
+      
+      // Demo unscheduled jobs as fallback
+      const demoUnscheduledJobs = [
             {
               id: "201",
               job_number: "JOB-2024-0201",
@@ -387,15 +394,10 @@ const SchedulingCalendar: React.FC = () => {
             }
           ];
           
-          setUnscheduledJobs(demoUnscheduledJobs);
-        }
-      } catch (error) {
-        console.error('Error fetching unscheduled jobs:', error);
-        // Handle error
-      }
-    } catch (error) {
-      console.error('Error in job fetching process:', error);
+      setUnscheduledJobs(demoUnscheduledJobs);
     }
+    
+    setLoading(false);
   }, [selectedDate, viewMode, weekDates]);
 
   useEffect(() => {
@@ -470,21 +472,6 @@ const SchedulingCalendar: React.FC = () => {
     }
   };
   
-  // Helper function to calculate end time
-  const calculateEndTime = (startTime: string, durationHours: number): string => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    let endHours = hours + Math.floor(durationHours);
-    const endMinutes = minutes + Math.round((durationHours % 1) * 60);
-    
-    if (endMinutes >= 60) {
-      endHours += 1;
-    }
-    
-    const formattedHours = String(endHours % 24).padStart(2, '0');
-    const formattedMinutes = String(endMinutes % 60).padStart(2, '0');
-    
-    return `${formattedHours}:${formattedMinutes}`;
-  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -595,11 +582,26 @@ const SchedulingCalendar: React.FC = () => {
     return technicianColors[techId];
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={40} sx={{ mb: 2 }} />
+        <Typography variant="h6" color="textSecondary">Loading scheduling data...</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
         📅 Job Scheduling Calendar
       </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       
       {/* View selector and date controls */}
       <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1108,7 +1110,7 @@ const SchedulingCalendar: React.FC = () => {
               onClick={async () => {
                 try {
                   // Create a new job via the backend API
-                  const newJob = await jobApi.create({
+                  await jobApi.create({
                     job_number: `JOB-${Date.now()}`,
                     title: newJobData.title,
                     description: newJobData.description,

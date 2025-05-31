@@ -11,6 +11,7 @@ import {
   Chip,
   Avatar,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -94,7 +95,10 @@ const CustomerList: React.FC = () => {
 
       {/* Customer Grid */}
       {loading ? (
-        <Typography>Loading customers...</Typography>
+        <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="200px">
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography variant="h6" color="textSecondary">Loading customers...</Typography>
+        </Box>
       ) : customers.length === 0 ? (
         <Card>
           <CardContent>

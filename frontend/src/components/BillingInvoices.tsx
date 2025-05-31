@@ -20,7 +20,8 @@ import {
   Paper,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -270,8 +271,9 @@ const BillingInvoices: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <Typography>Loading billing data...</Typography>
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={40} sx={{ mb: 2 }} />
+        <Typography variant="h6" color="textSecondary">Loading billing data...</Typography>
       </Box>
     );
   }
