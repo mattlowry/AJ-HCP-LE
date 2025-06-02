@@ -1,25 +1,42 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
 import ErrorBoundary, { PageErrorBoundary } from './components/ErrorBoundary';
 import GlobalErrorHandler from './components/GlobalErrorHandler';
-import Dashboard from './components/Dashboard';
-import CustomerList from './components/CustomerList';
-import CustomerDetail from './components/CustomerDetail';
-import SchedulingCalendar from './components/SchedulingCalendar';
-import JobList from './components/JobList';
-import BillingInvoices from './components/BillingInvoices';
-import InventoryManagement from './components/InventoryManagement';
-import AnalyticsDashboard from './components/AnalyticsDashboard';
-import TechnicianManagement from './components/TechnicianManagement';
-import ValidationDemo from './components/ValidationDemo';
-import Login from './components/Login';
-import UserRegistration from './components/UserRegistration';
-import UserProfile from './components/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/MainLayout';
+import LoadingSpinner from './components/LoadingSpinner';
+
+// Lazy load components for code splitting
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const CustomerList = lazy(() => import('./components/CustomerList'));
+const CustomerDetail = lazy(() => import('./components/CustomerDetail'));
+const SchedulingCalendar = lazy(() => import('./components/SchedulingCalendar'));
+const JobList = lazy(() => import('./components/JobList'));
+const BillingInvoices = lazy(() => import('./components/BillingInvoices'));
+const InventoryManagement = lazy(() => import('./components/InventoryManagement'));
+const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'));
+const TechnicianManagement = lazy(() => import('./components/TechnicianManagement'));
+const ValidationDemo = lazy(() => import('./components/ValidationDemo'));
+const Login = lazy(() => import('./components/Login'));
+const UserRegistration = lazy(() => import('./components/UserRegistration'));
+const UserProfile = lazy(() => import('./components/UserProfile'));
+
+// Preload critical components
+const preloadCriticalComponents = () => {
+  // Preload dashboard and navigation components that users will likely need first
+  import('./components/Dashboard');
+  import('./components/CustomerList');
+  import('./components/JobList');
+};
+
+// Start preloading on app initialization
+if (typeof window !== 'undefined') {
+  // Preload after a short delay to not impact initial load
+  setTimeout(preloadCriticalComponents, 100);
+}
 
 const theme = createTheme({
   palette: {
@@ -32,8 +49,36 @@ const theme = createTheme({
   },
 });
 
-function App() {
+// Optimized Suspense wrapper with consistent loading UI
+const SuspenseWrapper: React.FC<{ 
+  children: React.ReactNode; 
+  fallback?: React.ReactNode;
+}> = ({ children, fallback }) => (
+  <Suspense fallback={fallback || <LoadingSpinner />}>
+    {children}
+  </Suspense>
+);
 
+// Route wrapper with error boundary and suspense
+const RouteWrapper: React.FC<{
+  children: React.ReactNode;
+  pageName: string;
+  roles?: string[];
+}> = ({ children, pageName, roles }) => (
+  <SuspenseWrapper>
+    <PageErrorBoundary pageName={pageName}>
+      {roles ? (
+        <ProtectedRoute allowedRoles={roles}>
+          {children}
+        </ProtectedRoute>
+      ) : (
+        children
+      )}
+    </PageErrorBoundary>
+  </SuspenseWrapper>
+);
+
+function App() {
   try {
     return (
       <ErrorBoundary component="App">
@@ -43,103 +88,168 @@ function App() {
             <Router>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/login" element={
-                  <PageErrorBoundary pageName="Login">
-                    <Login />
-                  </PageErrorBoundary>
-                } />
-                <Route path="/register" element={
-                  <PageErrorBoundary pageName="Registration">
-                    <UserRegistration />
-                  </PageErrorBoundary>
-                } />
+                <Route 
+                  path="/login" 
+                  element={
+                    <RouteWrapper pageName="Login">
+                      <Login />
+                    </RouteWrapper>
+                  } 
+                />
+                <Route 
+                  path="/register" 
+                  element={
+                    <RouteWrapper pageName="Registration">
+                      <UserRegistration />
+                    </RouteWrapper>
+                  } 
+                />
                 
                 {/* Protected Routes with Main Layout */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <ErrorBoundary component="MainLayout">
-                      <MainLayout />
-                    </ErrorBoundary>
-                  </ProtectedRoute>
-                }>
-                  <Route index element={
-                    <PageErrorBoundary pageName="Dashboard">
-                      <Dashboard />
-                    </PageErrorBoundary>
-                  } />
-                  <Route path="customers" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                      <PageErrorBoundary pageName="Customer List">
+                <Route 
+                  path="/" 
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary component="MainLayout">
+                        <MainLayout />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route 
+                    index 
+                    element={
+                      <RouteWrapper pageName="Dashboard">
+                        <Dashboard />
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="customers" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Customer List"
+                        roles={['admin', 'manager', 'technician']}
+                      >
                         <CustomerList />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="customers/new" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <PageErrorBoundary pageName="New Customer">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="customers/new" 
+                    element={
+                      <RouteWrapper 
+                        pageName="New Customer"
+                        roles={['admin', 'manager']}
+                      >
                         <CustomerDetail />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="customers/:id" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                      <PageErrorBoundary pageName="Customer Details">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="customers/:id" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Customer Details"
+                        roles={['admin', 'manager', 'technician']}
+                      >
                         <CustomerDetail />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="scheduling" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                      <PageErrorBoundary pageName="Scheduling">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="scheduling" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Scheduling"
+                        roles={['admin', 'manager', 'technician']}
+                      >
                         <SchedulingCalendar />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="jobs" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                      <PageErrorBoundary pageName="Jobs">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="jobs" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Jobs"
+                        roles={['admin', 'manager', 'technician']}
+                      >
                         <JobList />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="billing" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <PageErrorBoundary pageName="Billing">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="billing" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Billing"
+                        roles={['admin', 'manager']}
+                      >
                         <BillingInvoices />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="inventory" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
-                      <PageErrorBoundary pageName="Inventory">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="inventory" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Inventory"
+                        roles={['admin', 'manager', 'technician']}
+                      >
                         <InventoryManagement />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="analytics" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <PageErrorBoundary pageName="Analytics">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="analytics" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Analytics"
+                        roles={['admin', 'manager']}
+                      >
                         <AnalyticsDashboard />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="technicians" element={
-                    <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                      <PageErrorBoundary pageName="Technicians">
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="technicians" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Technicians"
+                        roles={['admin', 'manager']}
+                      >
                         <TechnicianManagement />
-                      </PageErrorBoundary>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="validation-demo" element={
-                    <PageErrorBoundary pageName="Validation Demo">
-                      <ValidationDemo />
-                    </PageErrorBoundary>
-                  } />
-                  <Route path="profile" element={
-                    <PageErrorBoundary pageName="Profile">
-                      <UserProfile />
-                    </PageErrorBoundary>
-                  } />
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="validation-demo" 
+                    element={
+                      <RouteWrapper pageName="Validation Demo">
+                        <ValidationDemo />
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="profile" 
+                    element={
+                      <RouteWrapper pageName="Profile">
+                        <UserProfile />
+                      </RouteWrapper>
+                    } 
+                  />
                 </Route>
               </Routes>
             </Router>

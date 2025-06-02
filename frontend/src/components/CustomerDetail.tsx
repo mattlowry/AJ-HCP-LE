@@ -18,6 +18,12 @@ import {
   Select,
   Alert,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -27,10 +33,13 @@ import {
   Star as StarIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { customerApi } from '../services/api';
-import { Customer } from '../types/customer';
+import { customerApi, propertyApi } from '../services/api';
+import { Customer, Property } from '../types/customer';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,6 +75,12 @@ const CustomerDetail: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Property management state
+  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [propertyFormData, setPropertyFormData] = useState<Partial<Property>>({});
+  const [propertyLoading, setPropertyLoading] = useState(false);
 
   const fetchCustomer = React.useCallback(async (customerId: number) => {
     try {
@@ -152,6 +167,92 @@ const CustomerDetail: React.FC = () => {
   const handleEdit = () => {
     setIsEditing(true);
     setFormData(customer || {});
+  };
+
+  // Property management functions
+  const handleAddProperty = () => {
+    setShowAddProperty(true);
+    setEditingProperty(null);
+    setPropertyFormData({
+      customer: customer?.id,
+      property_type: 'single_family',
+      street_address: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      has_gfci_outlets: false,
+      has_afci_breakers: false,
+    });
+  };
+
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setShowAddProperty(true);
+    setPropertyFormData(property);
+  };
+
+  const handleDeleteProperty = async (propertyId: number) => {
+    if (!window.confirm('Are you sure you want to delete this property?')) return;
+    
+    try {
+      setPropertyLoading(true);
+      await propertyApi.delete(propertyId);
+      
+      // Refresh customer data to update properties list
+      if (customer) {
+        await fetchCustomer(customer.id);
+      }
+      setSuccess('Property deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting property:', error);
+      setError(error.response?.data?.message || 'Error deleting property');
+    } finally {
+      setPropertyLoading(false);
+    }
+  };
+
+  const handlePropertyInputChange = (field: keyof Property, value: any) => {
+    setPropertyFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveProperty = async () => {
+    try {
+      setPropertyLoading(true);
+      setError(null);
+      
+      if (editingProperty) {
+        // Update existing property
+        await propertyApi.update(editingProperty.id, propertyFormData);
+        setSuccess('Property updated successfully!');
+      } else {
+        // Create new property
+        await customerApi.addProperty(customer!.id, propertyFormData);
+        setSuccess('Property added successfully!');
+      }
+      
+      // Refresh customer data to update properties list
+      if (customer) {
+        await fetchCustomer(customer.id);
+      }
+      
+      setShowAddProperty(false);
+      setEditingProperty(null);
+      setPropertyFormData({});
+    } catch (error: any) {
+      console.error('Error saving property:', error);
+      setError(error.response?.data?.message || 'Error saving property');
+    } finally {
+      setPropertyLoading(false);
+    }
+  };
+
+  const handleCancelProperty = () => {
+    setShowAddProperty(false);
+    setEditingProperty(null);
+    setPropertyFormData({});
   };
 
   if (loading) {
@@ -416,24 +517,93 @@ const CustomerDetail: React.FC = () => {
         </Box>
 
         <TabPanel value={tabValue} index={0}>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Properties</Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddProperty}
+              disabled={propertyLoading}
+            >
+              Add Property
+            </Button>
+          </Box>
+          
           {customer?.properties?.length ? (
             <Grid container spacing={2}>
               {customer?.properties?.map((property) => (
                 <Grid item xs={12} md={6} key={property.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        {property.property_type.replace('_', ' ')}
-                      </Typography>
-                      <Typography>{property.full_address}</Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <HomeIcon sx={{ mr: 1, color: 'primary.main' }} />
+                          <Typography variant="h6">
+                            {property.property_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleEditProperty(property)}
+                            disabled={propertyLoading}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDeleteProperty(property.id)}
+                            disabled={propertyLoading}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      
+                      <Typography gutterBottom>{property.full_address}</Typography>
+                      
+                      {(property.square_footage || property.year_built || property.bedrooms || property.bathrooms) && (
+                        <Box sx={{ mb: 1 }}>
+                          {property.square_footage && (
+                            <Chip label={`${property.square_footage} sq ft`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                          )}
+                          {property.year_built && (
+                            <Chip label={`Built ${property.year_built}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                          )}
+                          {property.bedrooms && (
+                            <Chip label={`${property.bedrooms} bed`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                          )}
+                          {property.bathrooms && (
+                            <Chip label={`${property.bathrooms} bath`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                          )}
+                        </Box>
+                      )}
+                      
                       {property.main_panel_brand && (
                         <Typography variant="body2" color="text.secondary">
-                          Panel: {property.main_panel_brand} ({property.main_panel_amperage}A)
+                          🔌 Panel: {property.main_panel_brand} ({property.main_panel_amperage}A)
                         </Typography>
                       )}
-                      {property.square_footage && (
+                      
+                      {property.electrical_last_updated && (
                         <Typography variant="body2" color="text.secondary">
-                          {property.square_footage} sq ft
+                          ⚡ Last Updated: {new Date(property.electrical_last_updated).toLocaleDateString()}
+                        </Typography>
+                      )}
+                      
+                      <Box sx={{ mt: 1 }}>
+                        {property.has_gfci_outlets && (
+                          <Chip label="GFCI Outlets" size="small" color="success" sx={{ mr: 0.5 }} />
+                        )}
+                        {property.has_afci_breakers && (
+                          <Chip label="AFCI Breakers" size="small" color="success" sx={{ mr: 0.5 }} />
+                        )}
+                      </Box>
+                      
+                      {property.notes && (
+                        <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                          📝 {property.notes}
                         </Typography>
                       )}
                     </CardContent>
@@ -442,7 +612,12 @@ const CustomerDetail: React.FC = () => {
               ))}
             </Grid>
           ) : (
-            <Typography color="text.secondary">No properties on file</Typography>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography color="text.secondary" gutterBottom>No properties on file</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Add a property to track electrical installations and service history
+              </Typography>
+            </Box>
           )}
         </TabPanel>
 
@@ -524,6 +699,268 @@ const CustomerDetail: React.FC = () => {
         </TabPanel>
       </Card>
       )}
+
+      {/* Property Form Dialog */}
+      <Dialog open={showAddProperty} onClose={handleCancelProperty} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingProperty ? 'Edit Property' : 'Add New Property'}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Property Type</InputLabel>
+                <Select
+                  value={propertyFormData.property_type || 'single_family'}
+                  label="Property Type"
+                  onChange={(e) => handlePropertyInputChange('property_type', e.target.value)}
+                >
+                  <MenuItem value="single_family">Single Family</MenuItem>
+                  <MenuItem value="townhouse">Townhouse</MenuItem>
+                  <MenuItem value="condo">Condo</MenuItem>
+                  <MenuItem value="apartment">Apartment</MenuItem>
+                  <MenuItem value="commercial">Commercial</MenuItem>
+                  <MenuItem value="industrial">Industrial</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Square Footage"
+                type="number"
+                value={propertyFormData.square_footage || ''}
+                onChange={(e) => handlePropertyInputChange('square_footage', parseInt(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Street Address"
+                value={propertyFormData.street_address || ''}
+                onChange={(e) => handlePropertyInputChange('street_address', e.target.value)}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="City"
+                value={propertyFormData.city || ''}
+                onChange={(e) => handlePropertyInputChange('city', e.target.value)}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="State"
+                value={propertyFormData.state || ''}
+                onChange={(e) => handlePropertyInputChange('state', e.target.value)}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="ZIP Code"
+                value={propertyFormData.zip_code || ''}
+                onChange={(e) => handlePropertyInputChange('zip_code', e.target.value)}
+                required
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Year Built"
+                type="number"
+                value={propertyFormData.year_built || ''}
+                onChange={(e) => handlePropertyInputChange('year_built', parseInt(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="Bedrooms"
+                type="number"
+                value={propertyFormData.bedrooms || ''}
+                onChange={(e) => handlePropertyInputChange('bedrooms', parseInt(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="Bathrooms"
+                type="number"
+                inputProps={{ step: 0.5 }}
+                value={propertyFormData.bathrooms || ''}
+                onChange={(e) => handlePropertyInputChange('bathrooms', parseFloat(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Electrical Information</Typography>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Main Panel Brand"
+                value={propertyFormData.main_panel_brand || ''}
+                onChange={(e) => handlePropertyInputChange('main_panel_brand', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="Panel Amperage"
+                type="number"
+                value={propertyFormData.main_panel_amperage || ''}
+                onChange={(e) => handlePropertyInputChange('main_panel_amperage', parseInt(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <TextField
+                fullWidth
+                label="Panel Age (years)"
+                type="number"
+                value={propertyFormData.main_panel_age || ''}
+                onChange={(e) => handlePropertyInputChange('main_panel_age', parseInt(e.target.value) || null)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Electrical Last Updated"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={propertyFormData.electrical_last_updated || ''}
+                onChange={(e) => handlePropertyInputChange('electrical_last_updated', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={propertyFormData.has_gfci_outlets || false}
+                      onChange={(e) => handlePropertyInputChange('has_gfci_outlets', e.target.checked)}
+                    />
+                  }
+                  label="Has GFCI Outlets"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={propertyFormData.has_afci_breakers || false}
+                      onChange={(e) => handlePropertyInputChange('has_afci_breakers', e.target.checked)}
+                    />
+                  }
+                  label="Has AFCI Breakers"
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Access Information</Typography>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Gate Code"
+                value={propertyFormData.gate_code || ''}
+                onChange={(e) => handlePropertyInputChange('gate_code', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Key Location"
+                value={propertyFormData.key_location || ''}
+                onChange={(e) => handlePropertyInputChange('key_location', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Access Instructions"
+                multiline
+                rows={2}
+                value={propertyFormData.access_instructions || ''}
+                onChange={(e) => handlePropertyInputChange('access_instructions', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Emergency Contact</Typography>
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Emergency Contact Name"
+                value={propertyFormData.emergency_contact_name || ''}
+                onChange={(e) => handlePropertyInputChange('emergency_contact_name', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Emergency Contact Phone"
+                value={propertyFormData.emergency_contact_phone || ''}
+                onChange={(e) => handlePropertyInputChange('emergency_contact_phone', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Relationship"
+                value={propertyFormData.emergency_contact_relationship || ''}
+                onChange={(e) => handlePropertyInputChange('emergency_contact_relationship', e.target.value)}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Notes"
+                multiline
+                rows={3}
+                value={propertyFormData.notes || ''}
+                onChange={(e) => handlePropertyInputChange('notes', e.target.value)}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelProperty}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveProperty}
+            disabled={propertyLoading}
+            startIcon={<SaveIcon />}
+          >
+            {propertyLoading ? 'Saving...' : (editingProperty ? 'Update Property' : 'Add Property')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

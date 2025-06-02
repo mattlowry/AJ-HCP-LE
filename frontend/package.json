@@ -32,7 +32,17 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build:analyze": "ANALYZE_BUNDLE=true npm run build",
+    "build:prod": "NODE_ENV=production npm run build",
     "test": "react-scripts test",
+    "test:unit": "react-scripts test --testPathIgnorePatterns=integration",
+    "test:integration": "jest --config=jest.integration.config.js",
+    "test:integration:watch": "jest --config=jest.integration.config.js --watch",
+    "test:integration:coverage": "jest --config=jest.integration.config.js --coverage",
+    "test:all": "npm run test:unit -- --watchAll=false && npm run test:integration",
+    "perf:analyze": "npm run build:analyze && npx serve -s build",
+    "perf:lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html",
+    "perf:bundle-size": "npm run build && npx bundlesize",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
