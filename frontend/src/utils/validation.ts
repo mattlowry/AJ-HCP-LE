@@ -80,10 +80,60 @@ export const validationPatterns = {
   strongPassword: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
 };
 
-// Pre-defined validation rules
+// Helper functions to create validation rules
 export const commonValidationRules = {
-  required: { required: true },
-  email: { 
+  required: (message?: string): ValidationRule => ({
+    required: true,
+    custom: (value: any) => {
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return message || 'This field is required';
+      }
+      return null;
+    }
+  }),
+  
+  minLength: (length: number, message?: string): ValidationRule => ({
+    minLength: length,
+    custom: (value: string) => {
+      if (value && value.length < length) {
+        return message || `Must be at least ${length} characters`;
+      }
+      return null;
+    }
+  }),
+  
+  maxLength: (length: number, message?: string): ValidationRule => ({
+    maxLength: length,
+    custom: (value: string) => {
+      if (value && value.length > length) {
+        return message || `Must be no more than ${length} characters`;
+      }
+      return null;
+    }
+  }),
+  
+  email: (message?: string): ValidationRule => ({
+    pattern: validationPatterns.email,
+    custom: (value: string) => {
+      if (value && !validationPatterns.email.test(value)) {
+        return message || 'Please enter a valid email address';
+      }
+      return null;
+    }
+  }),
+  
+  phone: (message?: string): ValidationRule => ({
+    pattern: validationPatterns.phoneUS,
+    custom: (value: string) => {
+      if (value && !validationPatterns.phoneUS.test(value)) {
+        return message || 'Please enter a valid phone number (e.g., (555) 123-4567)';
+      }
+      return null;
+    }
+  }),
+
+  // Pre-defined validation rule objects
+  emailRule: { 
     required: true, 
     pattern: validationPatterns.email,
     custom: (value: string) => {
@@ -93,7 +143,7 @@ export const commonValidationRules = {
       return null;
     }
   },
-  phone: { 
+  phoneRule: { 
     required: true, 
     pattern: validationPatterns.phoneUS,
     custom: (value: string) => {
@@ -103,6 +153,18 @@ export const commonValidationRules = {
       return null;
     }
   },
+  currencyRule: {
+    required: true,
+    min: 0,
+    custom: (value: number) => {
+      if (value !== undefined && value < 0) {
+        return 'Amount cannot be negative';
+      }
+      return null;
+    }
+  },
+  
+  // Backward compatibility aliases
   currency: {
     required: true,
     min: 0,

@@ -103,11 +103,11 @@ const PerformanceMonitor: React.FC = () => {
         name: resource.name.split('/').pop() || resource.name,
         duration: resource.duration,
         size: (resource as any).transferSize,
-        type: resource.initiatorType
+        type: (resource as any).initiatorType
       })).sort((a, b) => b.duration - a.duration).slice(0, 10);
 
       const metrics: PerformanceMetrics = {
-        loadTime: navigation?.loadEventEnd - navigation?.navigationStart || 0,
+        loadTime: navigation?.loadEventEnd - navigation?.fetchStart || 0,
         domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
         firstContentfulPaint: fcp,
         largestContentfulPaint: lcp,

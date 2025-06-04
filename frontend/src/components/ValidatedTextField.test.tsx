@@ -28,13 +28,12 @@ describe('ValidatedTextField', () => {
   });
 
   it('should call onChange when value changes', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
     
     render(<ValidatedTextField {...defaultProps} onChange={mockOnChange} />);
     
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, 'new value');
+    await userEvent.type(input, 'new value');
     
     expect(mockOnChange).toHaveBeenCalled();
   });
@@ -79,7 +78,6 @@ describe('ValidatedTextField', () => {
   });
 
   it('should clear validation errors when field becomes valid', async () => {
-    const user = userEvent.setup();
     const validationRules = [
       commonValidationRules.minLength(5, 'Must be at least 5 characters')
     ];
@@ -117,7 +115,6 @@ describe('ValidatedTextField', () => {
   });
 
   it('should format currency when formatType is currency', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
 
     render(
@@ -129,7 +126,7 @@ describe('ValidatedTextField', () => {
     );
 
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, '1000');
+    await userEvent.type(input, '1000');
     fireEvent.blur(input);
 
     await waitFor(() => {
@@ -138,7 +135,6 @@ describe('ValidatedTextField', () => {
   });
 
   it('should format phone when formatType is phone', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
 
     render(
@@ -150,7 +146,7 @@ describe('ValidatedTextField', () => {
     );
 
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, '5551234567');
+    await userEvent.type(input, '5551234567');
     fireEvent.blur(input);
 
     await waitFor(() => {

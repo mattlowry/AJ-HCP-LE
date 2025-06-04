@@ -299,11 +299,11 @@ export const cacheApiResponse = <T>(
  */
 export const clearExpiredCache = (): void => {
   const now = Date.now();
-  for (const [key, value] of cacheStore.entries()) {
+  Array.from(cacheStore.entries()).forEach(([key, value]) => {
     if (value.expiry <= now) {
       cacheStore.delete(key);
     }
-  }
+  });
 };
 
 /**

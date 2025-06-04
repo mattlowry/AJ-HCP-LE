@@ -8,7 +8,7 @@ interface UseImageLazyLoadingOptions {
 }
 
 interface UseImageLazyLoadingReturn {
-  imgRef: React.RefObject<HTMLImageElement>;
+  imgRef: React.RefObject<HTMLImageElement | null>;
   isLoaded: boolean;
   isInView: boolean;
   error: string | null;

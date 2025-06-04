@@ -1,6 +1,8 @@
 // Test file for the material markup system functionality
 // This tests the markup calculation logic from SchedulingCalendar component
 
+export {};
+
 describe('Material Markup System', () => {
   // Define the markup tiers as they appear in the component
   const materialMarkupTiers = [

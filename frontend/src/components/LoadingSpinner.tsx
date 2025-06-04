@@ -12,7 +12,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 40,
   variant = 'page'
 }) => {
-  const getContainerStyles = () => {
+  const getContainerStyles = (): any => {
     switch (variant) {
       case 'page':
         return {

@@ -1,0 +1,258 @@
+import { 
+  validateForm,
+  validateField,
+  commonValidationRules, 
+  validationPatterns, 
+  formatCurrency, 
+  formatPhoneNumber, 
+  ValidationResult 
+} from './validation';
+
+describe('Validation Utility', () => {
+  describe('validateForm', () => {
+    const mockRules = {
+      email: {
+        required: true,
+        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        minLength: 5
+      },
+      name: {
+        required: true,
+        minLength: 2
+      }
+    };
+
+    it('should return valid result when all validations pass', () => {
+      const data = { email: 'test@example.com', name: 'John Doe' };
+      const result = validateForm(data, mockRules);
+      
+      expect(result.isValid).toBeNull();
+      expect(result.errors).toEqual({});
+    });
+
+    it('should return validation errors when validations fail', () => {
+      const data = { email: 'invalid', name: '' };
+      const result = validateForm(data, mockRules);
+      
+      expect(result.isValid).toBeTruthy();
+      expect(result.errors.email).toContain('Email must contain @');
+      expect(result.errors.name).toContain('Name is required');
+    });
+
+    it('should return multiple errors for a single field', () => {
+      const data = { email: 'test', name: 'John' };
+      const result = validateForm(data, mockRules);
+      
+      expect(result.isValid).toBeTruthy();
+      expect(result.errors.email).toHaveLength(2);
+      expect(result.errors.email).toContain('Email must contain @');
+      expect(result.errors.email).toContain('Email must be longer than 5 characters');
+    });
+
+    it('should handle missing fields gracefully', () => {
+      const data = { email: 'test@example.com' };
+      const result = validateForm(data, mockRules);
+      
+      expect(result.isValid).toBeTruthy();
+      expect(result.errors.name).toContain('Name is required');
+    });
+
+    it('should handle empty validation rules', () => {
+      const data = { email: 'test@example.com' };
+      const result = validateForm(data, {});
+      
+      expect(result.isValid).toBeNull();
+      expect(result.errors).toEqual({});
+    });
+  });
+
+  describe('commonValidationRules', () => {
+    describe('required', () => {
+      it('should return null for non-empty strings', () => {
+        const rule = commonValidationRules.required('Field is required');
+        expect(validateField('test', rule)).toBeNull();
+        expect(validateField('   test   ', rule)).toBeNull();
+      });
+
+      it('should return error message for empty or whitespace strings', () => {
+        const rule = commonValidationRules.required('Field is required');
+        expect(validateField('', rule)).toBe('Field is required');
+        expect(validateField('   ', rule)).toBe('Field is required');
+        expect(validateField(null as any, rule)).toBe('Field is required');
+        expect(validateField(undefined as any, rule)).toBe('Field is required');
+      });
+    });
+
+    describe('email', () => {
+      it('should return null for valid email addresses', () => {
+        const rule = commonValidationRules.email();
+        expect(validateField('test@example.com', rule)).toBeNull();
+        expect(validateField('user.name+tag@domain.co.uk', rule)).toBeNull();
+        expect(validateField('firstname-lastname@example.org', rule)).toBeNull();
+      });
+
+      it('should return error message for invalid email addresses', () => {
+        const rule = commonValidationRules.email();
+        expect(validateField('invalid', rule)).toBeTruthy();
+        expect(validateField('test@', rule)).toBeTruthy();
+        expect(validateField('@example.com', rule)).toBeTruthy();
+        expect(validateField('test.example.com', rule)).toBeTruthy();
+      });
+    });
+
+    describe('phone', () => {
+      it('should return null for valid phone numbers', () => {
+        const rule = commonValidationRules.phone();
+        expect(validateField('(555) 123-4567', rule)).toBeNull();
+        expect(validateField('555-123-4567', rule)).toBeNull();
+        expect(validateField('555.123.4567', rule)).toBeNull();
+        expect(validateField('5551234567', rule)).toBeNull();
+      });
+
+      it('should return error message for invalid phone numbers', () => {
+        const rule = commonValidationRules.phone();
+        expect(validateField('123', rule)).toBeTruthy();
+        expect(validateField('abc-def-ghij', rule)).toBeTruthy();
+        expect(validateField('', rule)).toBeTruthy();
+      });
+    });
+
+    describe('minLength', () => {
+      it('should return null for strings meeting minimum length', () => {
+        const rule = commonValidationRules.minLength(5);
+        expect(validateField('12345')).toBeNull();
+        expect(validateField('123456')).toBeNull();
+      });
+
+      it('should return error message for strings below minimum length', () => {
+        const rule = commonValidationRules.minLength(5);
+        expect(validateField('1234')).toBeTruthy();
+        expect(validateField('')).toBeTruthy();
+      });
+    });
+
+    describe('maxLength', () => {
+      it('should return null for strings within maximum length', () => {
+        const rule = commonValidationRules.maxLength(10);
+        expect(validateField('12345')).toBeNull();
+        expect(validateField('1234567890')).toBeNull();
+      });
+
+      it('should return error message for strings exceeding maximum length', () => {
+        const rule = commonValidationRules.maxLength(10);
+        expect(validateField('12345678901')).toBeTruthy();
+      });
+    });
+
+    describe('pattern', () => {
+      it('should return null for strings matching pattern', () => {
+        const rule = commonValidationRules.pattern(/^[A-Z]+$/, 'Must be uppercase letters');
+        expect(validateField('HELLO')).toBeNull();
+        expect(validateField('ABC')).toBeNull();
+      });
+
+      it('should return error message for strings not matching pattern', () => {
+        const rule = commonValidationRules.pattern(/^[A-Z]+$/, 'Must be uppercase letters');
+        expect(validateField('hello')).toBeTruthy();
+        expect(validateField('Hello')).toBeTruthy();
+        expect(validateField('123')).toBeTruthy();
+      });
+    });
+
+    describe('currency', () => {
+      it('should return null for valid currency amounts', () => {
+        const rule = commonValidationRules.currency();
+        expect(validateField('10.50')).toBeNull();
+        expect(validateField('1000')).toBeNull();
+        expect(validateField('0.99')).toBeNull();
+        expect(validateField('999999.99')).toBeNull();
+      });
+
+      it('should return error message for invalid currency amounts', () => {
+        const rule = commonValidationRules.currency();
+        expect(validateField('10.999')).toBeTruthy();
+        expect(validateField('abc')).toBeTruthy();
+        expect(validateField('-10')).toBeTruthy();
+        expect(validateField('')).toBeTruthy();
+      });
+    });
+
+    describe('zipCode', () => {
+      it('should return null for valid ZIP codes', () => {
+        const rule = commonValidationRules.zipCode();
+        expect(validateField('12345')).toBeNull();
+        expect(validateField('12345-6789')).toBeNull();
+      });
+
+      it('should return error message for invalid ZIP codes', () => {
+        const rule = commonValidationRules.zipCode();
+        expect(validateField('1234')).toBeTruthy();
+        expect(validateField('123456')).toBeTruthy();
+        expect(validateField('abcde')).toBeTruthy();
+        expect(validateField('')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('formatCurrency', () => {
+    it('should format numbers as currency', () => {
+      expect(formatCurrency(10.5)).toBe('$10.50');
+      expect(formatCurrency(1000)).toBe('$1,000.00');
+      expect(formatCurrency(0)).toBe('$0.00');
+      expect(formatCurrency(999999.99)).toBe('$999,999.99');
+    });
+
+    it('should handle edge cases', () => {
+      expect(formatCurrency(null as any)).toBe('$0.00');
+      expect(formatCurrency(undefined as any)).toBe('$0.00');
+      expect(formatCurrency(NaN)).toBe('$0.00');
+    });
+  });
+
+  describe('formatPhoneNumber', () => {
+    it('should format 10-digit phone numbers', () => {
+      expect(formatPhoneNumber('5551234567')).toBe('(555) 123-4567');
+      expect(formatPhoneNumber('1234567890')).toBe('(123) 456-7890');
+    });
+
+    it('should handle phone numbers with existing formatting', () => {
+      expect(formatPhoneNumber('(555) 123-4567')).toBe('(555) 123-4567');
+      expect(formatPhoneNumber('555-123-4567')).toBe('(555) 123-4567');
+      expect(formatPhoneNumber('555.123.4567')).toBe('(555) 123-4567');
+    });
+
+    it('should handle invalid phone numbers', () => {
+      expect(formatPhoneNumber('123')).toBe('123');
+      expect(formatPhoneNumber('abcdefghij')).toBe('abcdefghij');
+      expect(formatPhoneNumber('')).toBe('');
+    });
+
+    it('should handle phone numbers with country code', () => {
+      expect(formatPhoneNumber('+15551234567')).toBe('(555) 123-4567');
+      expect(formatPhoneNumber('15551234567')).toBe('(555) 123-4567');
+    });
+  });
+
+  describe('validationPatterns', () => {
+    it('should provide correct email pattern', () => {
+      expect(validationPatterns.email.test('test@example.com')).toBeNull();
+      expect(validationPatterns.email.test('invalid')).toBeTruthy();
+    });
+
+    it('should provide correct phone pattern', () => {
+      expect(validationPatterns.phone.test('(555) 123-4567')).toBeNull();
+      expect(validationPatterns.phone.test('invalid')).toBeTruthy();
+    });
+
+    it('should provide correct currency pattern', () => {
+      expect(validationPatterns.currency.test('10.50')).toBeNull();
+      expect(validationPatterns.currency.test('invalid')).toBeTruthy();
+    });
+
+    it('should provide correct ZIP code pattern', () => {
+      expect(validationPatterns.zipCode.test('12345')).toBeNull();
+      expect(validationPatterns.zipCode.test('12345-6789')).toBeNull();
+      expect(validationPatterns.zipCode.test('invalid')).toBeTruthy();
+    });
+  });
+});

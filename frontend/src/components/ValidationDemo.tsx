@@ -67,8 +67,8 @@ const ValidationDemo: React.FC = () => {
 
     const validationRules = {
       customerName: commonValidationRules.customerName,
-      email: commonValidationRules.email,
-      phone: commonValidationRules.phone,
+      email: commonValidationRules.email(),
+      phone: commonValidationRules.phone(),
       address: commonValidationRules.address,
       currency: commonValidationRules.currency,
       duration: commonValidationRules.duration,
@@ -164,7 +164,7 @@ const ValidationDemo: React.FC = () => {
             type="email"
             value={formData.email}
             onChange={handleFieldChange('email')}
-            validationRules={commonValidationRules.email}
+            validationRules={commonValidationRules.email()}
             onValidationChange={handleValidationChange}
             fieldName="email"
             showValidationIcon
@@ -178,7 +178,7 @@ const ValidationDemo: React.FC = () => {
             label="Phone Number *"
             value={formData.phone}
             onChange={handleFieldChange('phone')}
-            validationRules={commonValidationRules.phone}
+            validationRules={commonValidationRules.phone()}
             onValidationChange={handleValidationChange}
             fieldName="phone"
             formatType="phone"

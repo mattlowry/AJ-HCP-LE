@@ -63,7 +63,7 @@ const SuspenseWrapper: React.FC<{
 const RouteWrapper: React.FC<{
   children: React.ReactNode;
   pageName: string;
-  roles?: string[];
+  roles?: Array<'admin' | 'technician' | 'customer' | 'manager'>;
 }> = ({ children, pageName, roles }) => (
   <SuspenseWrapper>
     <PageErrorBoundary pageName={pageName}>
