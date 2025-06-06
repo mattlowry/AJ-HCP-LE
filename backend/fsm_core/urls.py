@@ -98,12 +98,13 @@ def react_app_view(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # API endpoints under /api/ prefix for consistency
     path('api/', include('customers.urls')),
-    path('jobs/', include('jobs.urls')),
-    path('scheduling/', include('scheduling.urls')),
-    path('billing/', include('billing.urls')),
-    path('inventory/', include('inventory.urls')),
-    path('analytics/', include('analytics.urls')),
+    path('api/jobs/', include('jobs.urls')),
+    path('api/scheduling/', include('scheduling.urls')),
+    path('api/billing/', include('billing.urls')),
+    path('api/inventory/', include('inventory.urls')),
+    path('api/analytics/', include('analytics.urls')),
     # Future app URLs will be added here
 ]
 

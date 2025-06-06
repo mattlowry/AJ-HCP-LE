@@ -43,7 +43,9 @@
       "Bash(/Users/matthewlong/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg -A 20 -B 5 \"fetchTechnicians\" /Users/matthewlong/AJ-HCP-LE/frontend/src/components/SchedulingCalendar.tsx)",
       "Bash(/Users/matthewlong/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/arm64-darwin/rg -n \"materials|Material|catalog|Catalog|Card|List.*item\" /Users/matthewlong/AJ-HCP-LE/frontend/src/components/SchedulingCalendar.tsx)",
       "Bash(npm test:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 install:*)"
     ],
     "deny": []
   },

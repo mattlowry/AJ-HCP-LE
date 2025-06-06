@@ -14,5 +14,5 @@ router.register(r'job-photos', JobPhotoViewSet)
 router.register(r'time-entries', JobTimeEntryViewSet)
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

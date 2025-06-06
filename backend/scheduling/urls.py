@@ -14,5 +14,5 @@ router.register(r'conflicts', ScheduleConflictViewSet)
 router.register(r'optimizations', ScheduleOptimizationViewSet)
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

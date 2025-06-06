@@ -373,4 +373,22 @@ export const schedulingApi = {
     api.patch(`/scheduling/schedule-conflicts/${id}/resolve/`, { resolution_notes: notes }),
 };
 
+// Analytics API
+export const analyticsApi = {
+  getBusinessOverview: (): Promise<{ data: any }> =>
+    api.get('/analytics/analytics/business_overview/'),
+  
+  getFinancialSummary: (): Promise<{ data: any }> =>
+    api.get('/analytics/analytics/financial_summary/'),
+  
+  getOperationalMetrics: (): Promise<{ data: any }> =>
+    api.get('/analytics/analytics/operational_metrics/'),
+  
+  getCustomerInsights: (): Promise<{ data: any }> =>
+    api.get('/analytics/analytics/customer_insights/'),
+  
+  getInventoryInsights: (): Promise<{ data: any }> =>
+    api.get('/analytics/analytics/inventory_insights/'),
+};
+
 export default api;
