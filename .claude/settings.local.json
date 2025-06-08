@@ -46,7 +46,8 @@
       "Bash(mv:*)",
       "Bash(pip3 list:*)",
       "Bash(pip3 install:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(TESTING=true python3 manage.py test fsm_core.cache_tests -v 2)"
     ],
     "deny": []
   },

@@ -102,6 +102,11 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default=''),
         'PORT': config('DB_PORT', default=''),
+        'OPTIONS': {
+            'sslmode': 'require' if config('DB_ENGINE', default='').startswith('django.db.backends.postgresql') else None,
+        } if config('DB_ENGINE', default='').startswith('django.db.backends.postgresql') else {},
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),  # Connection pooling
+        'CONN_HEALTH_CHECKS': True,  # Health checks for connections
     }
 }
 
@@ -169,6 +174,48 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
+                'retry_on_timeout': True,
+            },
+            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+        } if not config('TESTING', default=False, cast=bool) else {},
+        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
+        'KEY_PREFIX': 'fsm',
+        'VERSION': 1,
+    },
+    'sessions': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/2'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        } if not config('TESTING', default=False, cast=bool) else {},
+        'TIMEOUT': config('SESSION_CACHE_TIMEOUT', default=1800, cast=int),  # 30 minutes
+        'KEY_PREFIX': 'fsm_sessions',
+    },
+    'rate_limit': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/3'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        } if not config('TESTING', default=False, cast=bool) else {},
+        'TIMEOUT': 300,
+        'KEY_PREFIX': 'fsm_rate_limit',
+    }
+}
+
+# Use Redis for sessions
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'sessions'
 
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
@@ -267,19 +314,29 @@ TOKEN_AGE_LIMIT = config('TOKEN_AGE_LIMIT', default=86400, cast=int)  # 24 hours
 # Password security
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'fsm_core.validators.AdvancedPasswordValidator',
         'OPTIONS': {
-            'min_length': 8,
+            'min_length': 12,
+            'require_uppercase': True,
+            'require_lowercase': True,
+            'require_digits': True,
+            'require_special': True,
         }
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'fsm_core.validators.NoPersonalInfoValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'fsm_core.validators.RepeatedCharacterValidator',
+        'OPTIONS': {
+            'max_consecutive': 3,
+        }
+    },
+    {
+        'NAME': 'fsm_core.validators.CompromisedPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
 ]
 
