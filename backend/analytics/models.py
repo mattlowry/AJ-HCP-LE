@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from customers.models import Customer, Property
 from jobs.models import Job, Technician, ServiceType
 from datetime import datetime, date
@@ -9,7 +9,7 @@ from decimal import Decimal
 class Dashboard(models.Model):
     """Store dashboard configurations for different users/roles"""
     name = models.CharField(max_length=100)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='dashboards')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='dashboards')
     is_default = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     layout_config = models.JSONField(default=dict, help_text="Dashboard layout configuration")
@@ -61,7 +61,7 @@ class Metric(models.Model):
     
     # Settings
     is_active = models.BooleanField(default=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_metrics')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_metrics')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -125,7 +125,7 @@ class Report(models.Model):
     
     # Settings
     is_active = models.BooleanField(default=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_reports')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_reports')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -155,7 +155,7 @@ class ReportExecution(models.Model):
     
     # Context
     parameters_used = models.JSONField(default=dict, blank=True)
-    triggered_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    triggered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     is_scheduled = models.BooleanField(default=False)
 
     def __str__(self):
@@ -184,7 +184,7 @@ class DataExport(models.Model):
     date_range = models.JSONField(default=dict, help_text="Date range filters")
     
     # Execution details
-    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     requested_at = models.DateTimeField(auto_now_add=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -227,7 +227,7 @@ class UserActivityLog(models.Model):
         ('search', 'Search'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activity_logs')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     model_name = models.CharField(max_length=50, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)

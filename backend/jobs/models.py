@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from customers.models import Customer, Property
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -29,7 +29,7 @@ class ServiceType(models.Model):
 
 class Technician(models.Model):
     """Technician profiles and scheduling information"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     employee_id = models.CharField(max_length=20, unique=True)
     phone = PhoneNumberField()
     skill_level = models.CharField(max_length=20, choices=[
@@ -115,7 +115,7 @@ class Job(models.Model):
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_jobs')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_jobs')
 
     def __str__(self):
         return f"{self.job_number} - {self.title}"
@@ -129,7 +129,7 @@ class JobStatusHistory(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='status_history')
     old_status = models.CharField(max_length=20)
     new_status = models.CharField(max_length=20)
-    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(blank=True)
     changed_at = models.DateTimeField(auto_now_add=True)
 
@@ -154,7 +154,7 @@ class JobPhoto(models.Model):
     photo = models.ImageField(upload_to='job_photos/%Y/%m/%d/')
     photo_type = models.CharField(max_length=20, choices=PHOTO_TYPE_CHOICES)
     caption = models.CharField(max_length=200, blank=True)
-    taken_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    taken_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     taken_at = models.DateTimeField(auto_now_add=True)
     
     # AI-enhanced fields

@@ -45,7 +45,8 @@
       "Bash(npm test:*)",
       "Bash(mv:*)",
       "Bash(pip3 list:*)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   },
