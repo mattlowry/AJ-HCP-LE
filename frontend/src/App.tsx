@@ -13,8 +13,10 @@ import LoadingSpinner from './components/LoadingSpinner';
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const CustomerList = lazy(() => import('./components/CustomerList'));
 const CustomerDetail = lazy(() => import('./components/CustomerDetail'));
+const NewCustomerForm = lazy(() => import('./components/NewCustomerForm'));
 const SchedulingCalendar = lazy(() => import('./components/SchedulingCalendar'));
 const JobList = lazy(() => import('./components/JobList'));
+const CreateJobForm = lazy(() => import('./components/CreateJobForm'));
 const BillingInvoices = lazy(() => import('./components/BillingInvoices'));
 const InventoryManagement = lazy(() => import('./components/InventoryManagement'));
 const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard'));
@@ -144,7 +146,7 @@ function App() {
                         pageName="New Customer"
                         roles={['admin', 'manager']}
                       >
-                        <CustomerDetail />
+                        <NewCustomerForm />
                       </RouteWrapper>
                     } 
                   />
@@ -181,6 +183,18 @@ function App() {
                         roles={['admin', 'manager', 'technician']}
                       >
                         <JobList />
+                      </RouteWrapper>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="jobs/new" 
+                    element={
+                      <RouteWrapper 
+                        pageName="Create Job"
+                        roles={['admin', 'manager']}
+                      >
+                        <CreateJobForm />
                       </RouteWrapper>
                     } 
                   />

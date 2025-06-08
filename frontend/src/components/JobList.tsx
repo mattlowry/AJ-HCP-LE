@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { jobApi } from '../services/api';
 import { Job } from '../types/job';
 import { validateForm, commonValidationRules, formatCurrency } from '../utils/validation';
@@ -65,6 +66,7 @@ interface Technician {
 }
 
 const JobList: React.FC = () => {
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,23 +276,7 @@ const JobList: React.FC = () => {
   });
 
   const handleCreateJob = () => {
-    setEditingJob(null);
-    // Reset form data
-    setFormData({
-      customer_id: '',
-      property_address: '',
-      service_type_id: '',
-      status: 'pending',
-      priority: 'medium',
-      scheduled_date: new Date(),
-      assigned_technician_id: '',
-      description: '',
-      estimated_duration: 2,
-      total_amount: 0,
-      notes: ''
-    });
-    setFormErrors({});
-    setOpenDialog(true);
+    navigate('/jobs/new');
   };
 
   const handleEditJob = (job: Job) => {

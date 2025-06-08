@@ -85,7 +85,7 @@ class CDNService {
     
     if (width) params.append('w', width.toString());
     if (height) params.append('h', height.toString());
-    params.append('q', quality.toString());
+    if (quality !== undefined) params.append('q', quality.toString());
     params.append('fit', fit);
     
     if (blur) params.append('blur', blur.toString());
@@ -98,7 +98,7 @@ class CDNService {
       } else if (this.supportedFormats.has('webp')) {
         params.append('f', 'webp');
       }
-    } else if (format !== 'auto') {
+    } else {
       params.append('f', format);
     }
 
