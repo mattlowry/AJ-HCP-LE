@@ -175,7 +175,7 @@ const Dashboard: React.FC = () => {
           <Typography variant="h4" component="h1" gutterBottom>
             Dashboard
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" data-testid="welcome-message">
             Welcome back! Here's what's happening with your business today.
           </Typography>
         </Box>
@@ -184,6 +184,7 @@ const Dashboard: React.FC = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => navigate('/jobs/new')}
+            data-testid="action-create-job"
           >
             Create Job
           </Button>
@@ -191,6 +192,7 @@ const Dashboard: React.FC = () => {
             variant="outlined"
             startIcon={<PeopleIcon />}
             onClick={() => navigate('/customers/new')}
+            data-testid="action-add-customer"
           >
             Add Customer
           </Button>
@@ -198,10 +200,13 @@ const Dashboard: React.FC = () => {
       </Box>
       
       {/* Enhanced Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }} data-testid="metrics-container">
         {statsCards.map((card, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <Card 
+              sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}
+              data-testid={`metric-${card.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+            >
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                   <Box
