@@ -45,18 +45,26 @@ class RateLimitMiddleware(MiddlewareMixin):
         
         cache_key = f'rate_limit:{ip}:{request.path_info.split("/")[1]}'
         
-        # Get current request count
-        current_requests = cache.get(cache_key, 0)
-        
-        if current_requests >= limit:
-            logger.warning(f'Rate limit exceeded for IP {ip} on {request.path}')
-            return JsonResponse({
-                'error': 'Rate limit exceeded',
-                'detail': f'Maximum {limit} requests per minute allowed'
-            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
-        
-        # Increment counter
-        cache.set(cache_key, current_requests + 1, window)
+        try:
+            # Get current request count
+            current_requests = cache.get(cache_key, 0)
+            
+            if current_requests >= limit:
+                logger.warning(f'Rate limit exceeded for IP {ip} on {request.path}')
+                return JsonResponse({
+                    'error': 'Rate limit exceeded',
+                    'detail': f'Maximum {limit} requests per minute allowed'
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            
+            # Increment counter
+            cache.set(cache_key, current_requests + 1, window)
+            
+        except Exception as e:
+            # If cache is unavailable (e.g., Redis is down), skip rate limiting
+            # Log the error but don't block the request
+            logger.warning(f'Cache unavailable for rate limiting: {e}')
+            # In production, you might want to use in-memory fallback or database
+            pass
         
         return None
     

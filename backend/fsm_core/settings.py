@@ -175,47 +175,36 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Cache Configuration
+# Cache Configuration - Use in-memory cache for basic hosting
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
-                'retry_on_timeout': True,
-            },
-            'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
-            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
-        } if not config('TESTING', default=False, cast=bool) else {},
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'fsm-cache',
         'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
-        'KEY_PREFIX': 'fsm',
-        'VERSION': 1,
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
     },
     'sessions': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/2'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        } if not config('TESTING', default=False, cast=bool) else {},
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'fsm-sessions',
         'TIMEOUT': config('SESSION_CACHE_TIMEOUT', default=1800, cast=int),  # 30 minutes
-        'KEY_PREFIX': 'fsm_sessions',
+        'OPTIONS': {
+            'MAX_ENTRIES': 500,
+        }
     },
     'rate_limit': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if config('TESTING', default=False, cast=bool) else 'django_redis.cache.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/3'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        } if not config('TESTING', default=False, cast=bool) else {},
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'fsm-rate-limit',
         'TIMEOUT': 300,
-        'KEY_PREFIX': 'fsm_rate_limit',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
     }
 }
 
-# Use Redis for sessions
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'sessions'
+# Use database sessions for better persistence in production
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
