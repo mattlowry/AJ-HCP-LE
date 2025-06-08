@@ -53,11 +53,12 @@ import {
   Email as EmailIcon,
   Assignment as DocumentIcon,
   CheckCircle as ApproveIcon,
+  CheckCircle as CheckCircleIcon,
   Cancel as RejectIcon,
   CalendarToday as CalendarIcon,
   Schedule as ScheduleIcon,
   Work as WorkIcon,
-  Emergency as EmergencyIcon,
+  ReportProblem as EmergencyIcon,
   FilterList as FilterIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
@@ -766,17 +767,6 @@ const SchedulingCalendar: React.FC = () => {
           });
         }
       }
-    }
-  };
-  
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'emergency': return '#f44336';
-      case 'high': return '#ff9800';
-      case 'medium': return '#2196f3';
-      case 'low': return '#4caf50';
-      default: return '#9e9e9e';
     }
   };
 
@@ -2002,7 +1992,7 @@ AJ Long Electric Team`;
                 size="small" 
                 onClick={() => {
                   setRefreshing(true);
-                  fetchJobs().finally(() => setRefreshing(false));
+                  fetchJobsCallback().finally(() => setRefreshing(false));
                 }}
                 disabled={refreshing}
               >
@@ -2059,7 +2049,10 @@ AJ Long Electric Team`;
                     cursor: 'pointer',
                     '&:hover': { elevation: 4 }
                   }}
-                  onClick={() => openJobDetails(job)}
+                  onClick={() => {
+                    setSelectedJob(job);
+                    setOpenJobDialog(true);
+                  }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="subtitle1" fontWeight="600">
@@ -2199,7 +2192,6 @@ AJ Long Electric Team`;
           <AddIcon />
         </Fab>
       </Zoom>
-    </Box>
 
       {/* Job Details Dialog */}
       <Dialog
