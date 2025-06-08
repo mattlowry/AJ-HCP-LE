@@ -108,18 +108,23 @@ urlpatterns = [
     # Future app URLs will be added here
 ]
 
-# Serve React static files
+# Serve React app with fallback
 react_build_path = os.path.join(settings.BASE_DIR.parent, 'frontend', 'build')
-if os.path.exists(react_build_path):
-    urlpatterns += [
-        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': os.path.join(react_build_path, 'static')}),
-        re_path(r'^(?!admin|api|jobs).*$', TemplateView.as_view(template_name='index.html')),
-    ]
+react_index_exists = os.path.exists(os.path.join(react_build_path, 'index.html'))
+
+if react_index_exists:
+    try:
+        # Try to serve React app if build exists
+        urlpatterns += [
+            re_path(r'^static/(?P<path>.*)$', serve, {'document_root': os.path.join(react_build_path, 'static')}),
+            re_path(r'^(?!admin|api|jobs).*$', TemplateView.as_view(template_name='index.html')),
+        ]
+    except Exception:
+        # Fallback if template loading fails
+        urlpatterns += [path('', react_app_view)]
 else:
     # Fallback if React build not found
-    urlpatterns += [
-        path('', react_app_view),
-    ]
+    urlpatterns += [path('', react_app_view)]
 
 # Serve media files during development
 if settings.DEBUG:

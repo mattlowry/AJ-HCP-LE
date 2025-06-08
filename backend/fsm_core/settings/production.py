@@ -1,11 +1,72 @@
 # Production settings for AJ Long Electric FSM
 import os
-from .base import *
+from pathlib import Path
+
+# Build paths
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Basic Django apps
+DJANGO_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+
+THIRD_PARTY_APPS = [
+    'rest_framework',
+    'corsheaders',
+    'django_filters',
+]
+
+LOCAL_APPS = [
+    'customers',
+    'jobs',
+    'inventory',
+    'billing',
+    'scheduling',
+    'analytics',
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+ROOT_URLCONF = 'fsm_core.urls'
+WSGI_APPLICATION = 'fsm_core.wsgi.application'
+
+# Basic settings
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-production-key-change-me')
+USE_I18N = True
+USE_TZ = True
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [
+    'aj-long-electric.onrender.com',
+    'aj-long-electric.com',
+    'www.aj-long-electric.com',
+    '*.onrender.com',
+    'localhost',
+    '127.0.0.1'
+]
+
+# Override middleware to remove Redis-dependent ones for basic hosting
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
 
 # Database
 DATABASES = {
@@ -61,12 +122,62 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Static files
 STATIC_URL = '/static/'
-STATIC_ROOT = '/app/staticfiles'
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/app/media'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Template configuration for React app
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            BASE_DIR.parent / 'frontend' / 'build',  # React build directory
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# Static files configuration for React
+STATICFILES_DIRS = [
+    BASE_DIR.parent / 'frontend' / 'build' / 'static',
+] if (BASE_DIR.parent / 'frontend' / 'build' / 'static').exists() else []
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "https://aj-long-electric.onrender.com",
+    "https://aj-long-electric.com",
+    "https://www.aj-long-electric.com",
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # Logging
 LOGGING = {
