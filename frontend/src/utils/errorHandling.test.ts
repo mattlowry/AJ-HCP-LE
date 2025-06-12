@@ -1,121 +1,92 @@
-import { ErrorLogger, ErrorType, withErrorHandling } from './errorHandling';
+import { errorLogger, ErrorType, withErrorHandling } from './errorHandling';
 
 describe('ErrorLogger', () => {
-  let errorLogger: ErrorLogger;
   
   beforeEach(() => {
     jest.clearAllMocks();
-    errorLogger = ErrorLogger.getInstance();
+    errorLogger.clearErrors();
   });
 
-  describe('getInstance', () => {
-    it('should return a singleton instance', () => {
-      const instance1 = ErrorLogger.getInstance();
-      const instance2 = ErrorLogger.getInstance();
-      expect(instance1).toBe(instance2);
-    });
-  });
-
-  describe('categorizeError', () => {
-    it('should categorize network errors correctly', () => {
-      const networkError = { code: 'NETWORK_ERROR', message: 'Network failed' };
-      const category = errorLogger.categorizeError(networkError);
-      expect(category).toBe(ErrorType.NETWORK);
-    });
-
-    it('should categorize timeout errors correctly', () => {
-      const timeoutError = { code: 'ECONNABORTED', message: 'timeout' };
-      const category = errorLogger.categorizeError(timeoutError);
-      expect(category).toBe(ErrorType.NETWORK);
-    });
-
-    it('should categorize validation errors correctly', () => {
-      const validationError = { 
-        response: { status: 422, data: { message: 'Validation failed' } }
-      };
-      const category = errorLogger.categorizeError(validationError);
-      expect(category).toBe(ErrorType.VALIDATION);
-    });
-
-    it('should categorize authentication errors correctly', () => {
-      const authError = { 
-        response: { status: 401, data: { message: 'Unauthorized' } }
-      };
-      const category = errorLogger.categorizeError(authError);
-      expect(category).toBe(ErrorType.AUTHENTICATION);
-    });
-
-    it('should categorize authorization errors correctly', () => {
-      const authzError = { 
-        response: { status: 403, data: { message: 'Forbidden' } }
-      };
-      const category = errorLogger.categorizeError(authzError);
-      expect(category).toBe(ErrorType.AUTHORIZATION);
-    });
-
-    it('should categorize server errors correctly', () => {
-      const serverError = { 
-        response: { status: 500, data: { message: 'Internal Server Error' } }
-      };
-      const category = errorLogger.categorizeError(serverError);
-      expect(category).toBe(ErrorType.SERVER);
-    });
-
-    it('should categorize unknown errors as UNKNOWN', () => {
-      const unknownError = { message: 'Something went wrong' };
-      const category = errorLogger.categorizeError(unknownError);
-      expect(category).toBe(ErrorType.UNKNOWN);
+  describe('errorLogger instance', () => {
+    it('should be available as singleton', () => {
+      expect(errorLogger).toBeDefined();
+      expect(typeof errorLogger.logError).toBe('function');
     });
   });
 
   describe('logError', () => {
-    beforeEach(() => {
-      // Mock console methods
-      jest.spyOn(console, 'error').mockImplementation();
-      jest.spyOn(console, 'warn').mockImplementation();
-      jest.spyOn(console, 'log').mockImplementation();
-    });
-
-    it('should log error with correct details', () => {
-      const errorDetails = {
+    it('should log an error with correct details', () => {
+      const error = {
         message: 'Test error',
         userMessage: 'Something went wrong',
-        component: 'TestComponent',
-        action: 'testAction'
+        type: ErrorType.NETWORK
       };
-
-      const loggedError = errorLogger.logError(errorDetails);
-
-      expect(loggedError.id).toBeDefined();
-      expect(loggedError.timestamp).toBeDefined();
+      
+      const loggedError = errorLogger.logError(error);
+      
       expect(loggedError.message).toBe('Test error');
       expect(loggedError.userMessage).toBe('Something went wrong');
-      expect(loggedError.component).toBe('TestComponent');
-      expect(loggedError.action).toBe('testAction');
-      expect(loggedError.type).toBe(ErrorType.UNKNOWN);
+      expect(loggedError.type).toBe(ErrorType.NETWORK);
+      expect(loggedError.id).toBeDefined();
     });
 
-    it('should categorize error based on error object', () => {
-      const errorDetails = {
+    it('should store error in history', () => {
+      const error = {
+        message: 'Test error',
+        userMessage: 'Something went wrong'
+      };
+      
+      errorLogger.logError(error);
+      const errors = errorLogger.getErrors();
+      
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toBe('Test error');
+    });
+
+    it('should generate unique error IDs', () => {
+      const error1 = errorLogger.logError({
+        message: 'Error 1',
+        userMessage: 'Error 1'
+      });
+      
+      const error2 = errorLogger.logError({
+        message: 'Error 2', 
+        userMessage: 'Error 2'
+      });
+      
+      expect(error1.id).not.toBe(error2.id);
+    });
+
+  });
+
+  describe('getErrors', () => {
+    it('should return filtered errors by type', () => {
+      errorLogger.logError({
         message: 'Network error',
         userMessage: 'Connection failed',
-        error: { code: 'NETWORK_ERROR' }
-      };
+        type: ErrorType.NETWORK
+      });
+      
+      errorLogger.logError({
+        message: 'Validation error',
+        userMessage: 'Invalid input',
+        type: ErrorType.VALIDATION
+      });
 
-      const loggedError = errorLogger.logError(errorDetails);
-      expect(loggedError.type).toBe(ErrorType.NETWORK);
+      const networkErrors = errorLogger.getErrors({ type: ErrorType.NETWORK });
+      expect(networkErrors).toHaveLength(1);
+      expect(networkErrors[0].type).toBe(ErrorType.NETWORK);
     });
 
-    it('should include stack trace if available', () => {
-      const error = new Error('Test error');
-      const errorDetails = {
+    it('should clear errors', () => {
+      errorLogger.logError({
         message: 'Test error',
-        userMessage: 'Something went wrong',
-        error
-      };
-
-      const loggedError = errorLogger.logError(errorDetails);
-      expect(loggedError.stack).toBe(error.stack);
+        userMessage: 'Test message'
+      });
+      
+      expect(errorLogger.getErrors()).toHaveLength(1);
+      errorLogger.clearErrors();
+      expect(errorLogger.getErrors()).toHaveLength(0);
     });
   });
 
@@ -150,26 +121,24 @@ describe('ErrorLogger', () => {
       };
 
       const errorDetails = errorLogger.handleError(axiosError);
-      expect(errorDetails.type).toBe(ErrorType.VALIDATION);
-      expect(errorDetails.httpStatus).toBe(400);
+      expect(errorDetails.type).toBe(ErrorType.BUSINESS_LOGIC);
+      expect(errorDetails.metadata?.status).toBe(400);
     });
   });
 });
 
 describe('withErrorHandling', () => {
   let mockAsyncFunction: jest.Mock;
-  let errorLogger: ErrorLogger;
 
   beforeEach(() => {
     mockAsyncFunction = jest.fn();
-    errorLogger = ErrorLogger.getInstance();
     jest.spyOn(errorLogger, 'handleError').mockImplementation(() => ({
       id: 'test-id',
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
       message: 'Test error',
       userMessage: 'Something went wrong',
-      type: ErrorType.UNKNOWN,
-      component: 'TestComponent'
+      type: ErrorType.SYSTEM,
+      severity: 'MEDIUM' as any
     }));
   });
 

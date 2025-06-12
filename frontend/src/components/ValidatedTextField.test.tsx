@@ -9,7 +9,7 @@ describe('ValidatedTextField', () => {
     label: 'Test Field',
     value: '',
     onChange: jest.fn(),
-    validationRules: []
+    validationRules: undefined
   };
 
   beforeEach(() => {
@@ -28,22 +28,21 @@ describe('ValidatedTextField', () => {
   });
 
   it('should call onChange when value changes', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
     
     render(<ValidatedTextField {...defaultProps} onChange={mockOnChange} />);
     
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, 'new value');
+    await userEvent.type(input, 'new value');
     
     expect(mockOnChange).toHaveBeenCalled();
   });
 
   it('should show validation error when validation fails', async () => {
-    const validationRules = [
-      commonValidationRules.required('This field is required'),
-      commonValidationRules.minLength(5, 'Must be at least 5 characters')
-    ];
+    const validationRules = {
+      required: true,
+      minLength: 5
+    };
 
     render(
       <ValidatedTextField 
@@ -63,9 +62,9 @@ describe('ValidatedTextField', () => {
   });
 
   it('should show required field indicator when field is required', () => {
-    const validationRules = [
-      commonValidationRules.required('This field is required')
-    ];
+    const validationRules = {
+      required: true
+    };
 
     render(
       <ValidatedTextField 
@@ -79,10 +78,9 @@ describe('ValidatedTextField', () => {
   });
 
   it('should clear validation errors when field becomes valid', async () => {
-    const user = userEvent.setup();
-    const validationRules = [
-      commonValidationRules.minLength(5, 'Must be at least 5 characters')
-    ];
+    const validationRules = {
+      minLength: 5
+    };
 
     const { rerender } = render(
       <ValidatedTextField 
@@ -117,7 +115,6 @@ describe('ValidatedTextField', () => {
   });
 
   it('should format currency when formatType is currency', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
 
     render(
@@ -129,7 +126,7 @@ describe('ValidatedTextField', () => {
     );
 
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, '1000');
+    await userEvent.type(input, '1000');
     fireEvent.blur(input);
 
     await waitFor(() => {
@@ -138,7 +135,6 @@ describe('ValidatedTextField', () => {
   });
 
   it('should format phone when formatType is phone', async () => {
-    const user = userEvent.setup();
     const mockOnChange = jest.fn();
 
     render(
@@ -150,7 +146,7 @@ describe('ValidatedTextField', () => {
     );
 
     const input = screen.getByLabelText('Test Field');
-    await user.type(input, '5551234567');
+    await userEvent.type(input, '5551234567');
     fireEvent.blur(input);
 
     await waitFor(() => {
@@ -159,11 +155,11 @@ describe('ValidatedTextField', () => {
   });
 
   it('should show multiple validation errors', async () => {
-    const validationRules = [
-      commonValidationRules.required('This field is required'),
-      commonValidationRules.email('Must be a valid email'),
-      commonValidationRules.minLength(10, 'Must be at least 10 characters')
-    ];
+    const validationRules = {
+      required: true,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      minLength: 10
+    };
 
     render(
       <ValidatedTextField 
@@ -200,9 +196,9 @@ describe('ValidatedTextField', () => {
   });
 
   it('should prioritize validation errors over helper text', async () => {
-    const validationRules = [
-      commonValidationRules.required('This field is required')
-    ];
+    const validationRules = {
+      required: true
+    };
 
     render(
       <ValidatedTextField 
@@ -223,9 +219,9 @@ describe('ValidatedTextField', () => {
   });
 
   it('should handle email validation correctly', async () => {
-    const validationRules = [
-      commonValidationRules.email('Must be a valid email')
-    ];
+    const validationRules = {
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    };
 
     render(
       <ValidatedTextField 
@@ -244,9 +240,9 @@ describe('ValidatedTextField', () => {
   });
 
   it('should handle phone validation correctly', async () => {
-    const validationRules = [
-      commonValidationRules.phone('Must be a valid phone number')
-    ];
+    const validationRules = {
+      pattern: /^(\+1)?[\s\-]?\(?([0-9]{3})\)?[\s\-]?([0-9]{3})[\s\-]?([0-9]{4})$/
+    };
 
     render(
       <ValidatedTextField 

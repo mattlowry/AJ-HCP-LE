@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   Grid,
-  Card,
   CardContent,
   Typography,
   Box,
+  Avatar,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -14,8 +14,10 @@ import {
   Receipt as ReceiptIcon,
   Inventory as InventoryIcon,
   Analytics as AnalyticsIcon,
+  TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import SoftCard from './SoftCard';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -24,26 +26,34 @@ const Dashboard: React.FC = () => {
     {
       title: 'Total Customers',
       value: '0',
-      icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-      color: '#1976d2',
+      change: '+12%',
+      icon: <PeopleIcon />,
+      gradient: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+      bgColor: 'rgba(74, 144, 226, 0.1)',
     },
     {
       title: 'Active Jobs',
       value: '0',
-      icon: <WorkIcon sx={{ fontSize: 40 }} />,
-      color: '#2e7d32',
+      change: '+8%',
+      icon: <WorkIcon />,
+      gradient: 'linear-gradient(135deg, #51C878 0%, #3A9B5C 100%)',
+      bgColor: 'rgba(81, 200, 120, 0.1)',
     },
     {
       title: 'Today\'s Schedule',
       value: '0',
-      icon: <ScheduleIcon sx={{ fontSize: 40 }} />,
-      color: '#ed6c02',
+      change: '+5%',
+      icon: <ScheduleIcon />,
+      gradient: 'linear-gradient(135deg, #FFD93D 0%, #E6C234 100%)',
+      bgColor: 'rgba(255, 217, 61, 0.1)',
     },
     {
       title: 'Monthly Revenue',
       value: '$0',
-      icon: <MoneyIcon sx={{ fontSize: 40 }} />,
-      color: '#9c27b0',
+      change: '+18%',
+      icon: <MoneyIcon />,
+      gradient: 'linear-gradient(135deg, #FF6B6B 0%, #E55555 100%)',
+      bgColor: 'rgba(255, 107, 107, 0.1)',
     },
   ];
 
@@ -87,58 +97,165 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
-      </Typography>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #2E5A8A 0%, #4A90E2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 1,
+          }}
+        >
+          Dashboard
+        </Typography>
+        <Typography 
+          variant="h6" 
+          color="text.secondary" 
+          sx={{ fontWeight: 400 }}
+        >
+          Welcome back! Here's what's happening with your business today.
+        </Typography>
+      </Box>
       
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={3} sx={{ mb: 5 }}>
         {statsCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom>
-                      {card.title}
-                    </Typography>
-                    <Typography variant="h4" component="div">
-                      {card.value}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ color: card.color }}>
+          <Grid item xs={12} sm={6} lg={3} key={index}>
+            <SoftCard 
+              variant="elevated" 
+              glow
+              sx={{
+                height: '100%',
+                background: `linear-gradient(135deg, ${card.bgColor} 0%, rgba(255, 255, 255, 0.8) 100%)`,
+                '&:hover': {
+                  transform: 'translateY(-4px) scale(1.02)',
+                }
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                  <Avatar
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      background: card.gradient,
+                      boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+                    }}
+                  >
                     {card.icon}
+                  </Avatar>
+                  <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    sx={{ 
+                      color: '#51C878',
+                      backgroundColor: 'rgba(81, 200, 120, 0.1)',
+                      borderRadius: '12px',
+                      px: 1.5,
+                      py: 0.5,
+                    }}
+                  >
+                    <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      {card.change}
+                    </Typography>
                   </Box>
                 </Box>
+                <Typography 
+                  color="text.secondary" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    mb: 1,
+                  }}
+                >
+                  {card.title}
+                </Typography>
+                <Typography 
+                  variant="h4" 
+                  component="div"
+                  sx={{ 
+                    fontWeight: 700,
+                    color: '#202124',
+                  }}
+                >
+                  {card.value}
+                </Typography>
               </CardContent>
-            </Card>
+            </SoftCard>
           </Grid>
         ))}
       </Grid>
 
       {/* Quick Actions */}
-      <Typography variant="h5" component="h2" gutterBottom>
+      <Typography 
+        variant="h5" 
+        component="h2" 
+        sx={{ 
+          fontWeight: 600,
+          mb: 3,
+          color: '#202124',
+        }}
+      >
         Quick Actions
       </Typography>
       <Grid container spacing={3}>
         {quickActions.map((action, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Card sx={{ height: '100%', cursor: 'pointer', '&:hover': { boxShadow: 6 } }} onClick={action.action}>
-              <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
-                  <Box sx={{ color: '#1976d2', mr: 2 }}>
+          <Grid item xs={12} sm={6} lg={4} key={index}>
+            <SoftCard 
+              variant="glass" 
+              sx={{ 
+                height: '100%', 
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-6px) scale(1.02)',
+                  boxShadow: '0px 12px 40px rgba(74, 144, 226, 0.15)',
+                }
+              }} 
+              onClick={action.action}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box display="flex" alignItems="center" mb={2.5}>
+                  <Avatar
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      background: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+                      mr: 2,
+                      boxShadow: '0px 4px 12px rgba(74, 144, 226, 0.3)',
+                    }}
+                  >
                     {action.icon}
-                  </Box>
-                  <Typography variant="h6" component="div">
+                  </Avatar>
+                  <Typography 
+                    variant="h6" 
+                    component="div"
+                    sx={{ 
+                      fontWeight: 600,
+                      color: '#202124',
+                    }}
+                  >
                     {action.title}
                   </Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    lineHeight: 1.6,
+                  }}
+                >
                   {action.description}
                 </Typography>
               </CardContent>
-            </Card>
+            </SoftCard>
           </Grid>
         ))}
       </Grid>

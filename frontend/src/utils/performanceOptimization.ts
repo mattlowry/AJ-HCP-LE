@@ -299,7 +299,8 @@ export const cacheApiResponse = <T>(
  */
 export const clearExpiredCache = (): void => {
   const now = Date.now();
-  for (const [key, value] of cacheStore.entries()) {
+  const entries = Array.from(cacheStore.entries());
+  for (const [key, value] of entries) {
     if (value.expiry <= now) {
       cacheStore.delete(key);
     }

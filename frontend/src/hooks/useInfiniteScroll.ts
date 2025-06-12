@@ -9,7 +9,7 @@ interface UseInfiniteScrollOptions {
 }
 
 interface UseInfiniteScrollReturn {
-  triggerRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
   isFetchingNextPage: boolean;
 }
 
@@ -24,7 +24,7 @@ export const useInfiniteScroll = ({
   rootMargin = '100px',
   isLoading = false
 }: UseInfiniteScrollOptions): UseInfiniteScrollReturn => {
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
 
   const handleIntersection = useCallback(
