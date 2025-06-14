@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from customers.models import Customer
 from jobs.models import Job, Technician
@@ -126,7 +126,7 @@ class Item(models.Model):
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_items')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_items')
 
     def __str__(self):
         return f"{self.item_code} - {self.name}"
@@ -195,7 +195,7 @@ class StockMovement(models.Model):
     
     # Tracking
     movement_date = models.DateTimeField(default=datetime.now)
-    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='recorded_movements')
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='recorded_movements')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -245,7 +245,7 @@ class PurchaseOrder(models.Model):
     terms = models.TextField(blank=True)
     
     # Tracking
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_pos')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_pos')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -368,11 +368,11 @@ class InventoryAdjustment(models.Model):
     
     # Approval
     approved = models.BooleanField(default=False)
-    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_adjustments')
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_adjustments')
     approved_date = models.DateTimeField(null=True, blank=True)
     
     # Tracking
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_adjustments')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_adjustments')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

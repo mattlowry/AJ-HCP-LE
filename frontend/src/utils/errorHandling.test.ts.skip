@@ -13,6 +13,7 @@ describe('ErrorLogger', () => {
       expect(typeof errorLogger.logError).toBe('function');
     });
   });
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
 
   describe('logError', () => {
     it('should log an error with correct details', () => {
@@ -140,6 +141,7 @@ describe('withErrorHandling', () => {
       type: ErrorType.SYSTEM,
       severity: 'MEDIUM' as any
     }));
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
   });
 
   afterEach(() => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { jobApi } from '../services/api';
-import { Job } from '../types/job';
+import { useNavigate } from 'react-router-dom';
+import { jobApi, customerApi } from '../services/api';
+import { Job, JobListItem } from '../types/job';
 import { validateForm, commonValidationRules, formatCurrency } from '../utils/validation';
 import {
   Box,
@@ -65,12 +66,13 @@ interface Technician {
 }
 
 const JobList: React.FC = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const navigate = useNavigate();
+  const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editingJob, setEditingJob] = useState<JobListItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -96,149 +98,62 @@ const JobList: React.FC = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Demo data - structured to match Job interface
-  const demoJobs: any[] = [
-    {
-      id: 1,
-      job_number: 'JOB-2024-0001',
-      title: 'Kitchen Outlet Repair',
-      customer_name: 'John Smith',
-      property_address: '123 Main St, Anytown, NY 12345',
-      service_type: 'Electrical Repair',
-      status: 'scheduled' as const,
-      priority: 'high' as const,
-      scheduled_date: '2024-01-15T09:00:00Z',
-      scheduled_start: '2024-01-15T09:00:00Z',
-      assigned_technicians: ['Mike Johnson'],
-      description: 'Kitchen outlet not working - needs inspection',
-      estimated_duration: 2,
-      estimated_cost: 150.00,
-      total_amount: 150.00,
-      created_at: '2024-01-10T08:00:00Z',
-      updated_at: '2024-01-10T08:00:00Z',
-      customer: 1,
-      property: 1,
-      assigned_to: [1]
-    },
-    {
-      id: 2,
-      job_number: 'JOB-2024-0002',
-      title: 'Panel Installation',
-      customer_name: 'Sarah Davis',
-      property_address: '456 Oak Ave, Somewhere, NY 12346',
-      service_type: 'Panel Installation',
-      status: 'in_progress' as const,
-      priority: 'medium' as const,
-      scheduled_date: '2024-01-14T14:00:00Z',
-      scheduled_start: '2024-01-14T14:00:00Z',
-      assigned_technicians: ['Tom Wilson'],
-      description: 'Install new 200A electrical panel',
-      estimated_duration: 6,
-      estimated_cost: 800.00,
-      total_amount: 800.00,
-      created_at: '2024-01-08T10:30:00Z',
-      updated_at: '2024-01-08T10:30:00Z',
-      customer: 2,
-      property: 2,
-      assigned_to: [2]
-    },
-    {
-      id: 3,
-      job_number: 'JOB-2024-0003',
-      title: 'Emergency Power Restoration',
-      customer_name: 'Robert Brown',
-      property_address: '789 Pine St, Elsewhere, NY 12347',
-      service_type: 'Emergency Service',
-      status: 'completed' as const,
-      priority: 'emergency' as const,
-      scheduled_date: '2024-01-12T16:00:00Z',
-      scheduled_start: '2024-01-12T16:00:00Z',
-      assigned_technicians: ['Mike Johnson'],
-      description: 'Power outage in entire house',
-      estimated_duration: 3,
-      estimated_cost: 450.00,
-      total_amount: 450.00,
-      created_at: '2024-01-12T15:30:00Z',
-      updated_at: '2024-01-12T15:30:00Z',
-      customer: 3,
-      property: 3,
-      assigned_to: [1]
-    },
-    {
-      id: 4,
-      job_number: 'JOB-2024-0004',
-      title: 'Garage Workshop Wiring',
-      customer_name: 'Lisa Garcia',
-      property_address: '321 Elm Dr, Newtown, NY 12348',
-      service_type: 'Wiring Installation',
-      status: 'pending' as const,
-      priority: 'low' as const,
-      scheduled_date: '2024-01-18T11:00:00Z',
-      scheduled_start: '2024-01-18T11:00:00Z',
-      assigned_technicians: ['Tom Wilson'],
-      description: 'Wire new garage workshop',
-      estimated_duration: 8,
-      estimated_cost: 1200.00,
-      total_amount: 1200.00,
-      created_at: '2024-01-09T14:15:00Z',
-      updated_at: '2024-01-09T14:15:00Z',
-      customer: 4,
-      property: 4,
-      assigned_to: [2]
-    }
-  ];
 
   const loadJobs = async () => {
     try {
       setLoading(true);
       setError('');
       
-      // For demo purposes, use demo data directly
-      // TODO: Uncomment API call when backend is fully integrated
-      /*
       const response = await jobApi.getAll();
-      setJobs(response.data.results);
-      */
-      
-      // Using demo data
-      setJobs(demoJobs);
+      setJobs(response.data.results || []);
       setLoading(false);
     } catch (err) {
       console.error('Error loading jobs:', err);
-      setError('Failed to load jobs. Using demo data.');
-      // Fallback to demo data if API fails
-      setJobs(demoJobs);
+      setError('Failed to load jobs. Please check your connection and try again.');
+      setJobs([]);
       setLoading(false);
     }
   };
   
-  // Load demo customers, service types, and technicians
-  const loadDemoData = () => {
-    setCustomers([
-      { id: 1, first_name: 'John', last_name: 'Smith', full_name: 'John Smith' },
-      { id: 2, first_name: 'Sarah', last_name: 'Davis', full_name: 'Sarah Davis' },
-      { id: 3, first_name: 'Robert', last_name: 'Brown', full_name: 'Robert Brown' },
-      { id: 4, first_name: 'Lisa', last_name: 'Garcia', full_name: 'Lisa Garcia' },
-    ]);
-    
-    setServiceTypes([
-      { id: 1, name: 'Electrical Repair' },
-      { id: 2, name: 'Panel Installation' },
-      { id: 3, name: 'Emergency Service' },
-      { id: 4, name: 'Wiring Installation' },
-      { id: 5, name: 'Lighting Installation' },
-    ]);
-    
-    setTechnicians([
-      { id: 1, user: { first_name: 'Mike', last_name: 'Johnson' }, full_name: 'Mike Johnson' },
-      { id: 2, user: { first_name: 'Tom', last_name: 'Wilson' }, full_name: 'Tom Wilson' },
-      { id: 3, user: { first_name: 'Steve', last_name: 'Miller' }, full_name: 'Steve Miller' },
-    ]);
+  // Load customers, service types, and technicians
+  const loadReferenceData = async () => {
+    try {
+      // Load customers
+      const customersResponse = await customerApi.getAll();
+      setCustomers(customersResponse.data.results || []);
+      
+      // Load technicians - using mock data for now
+      setTechnicians([
+        { id: 1, user: { first_name: 'John', last_name: 'Smith' }, full_name: 'John Smith' },
+        { id: 2, user: { first_name: 'Jane', last_name: 'Doe' }, full_name: 'Jane Doe' },
+        { id: 3, user: { first_name: 'Mike', last_name: 'Johnson' }, full_name: 'Mike Johnson' }
+      ]);
+      
+      // For service types, we'll use a static list since there might not be an API endpoint
+      setServiceTypes([
+        { id: 1, name: 'Electrical Repair' },
+        { id: 2, name: 'Panel Installation' },
+        { id: 3, name: 'Emergency Service' },
+        { id: 4, name: 'Wiring Installation' },
+        { id: 5, name: 'Lighting Installation' },
+        { id: 6, name: 'Circuit Installation' },
+        { id: 7, name: 'Outlet Installation' },
+        { id: 8, name: 'Switch Installation' },
+        { id: 9, name: 'GFCI Installation' },
+        { id: 10, name: 'Electrical Inspection' },
+      ]);
+    } catch (err) {
+      console.error('Error loading reference data:', err);
+      // Set empty arrays if API calls fail
+      setCustomers([]);
+      setTechnicians([]);
+      setServiceTypes([]);
+    }
   };
 
   useEffect(() => {
     loadJobs();
-    loadDemoData();
+    loadReferenceData();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -274,26 +189,10 @@ const JobList: React.FC = () => {
   });
 
   const handleCreateJob = () => {
-    setEditingJob(null);
-    // Reset form data
-    setFormData({
-      customer_id: '',
-      property_address: '',
-      service_type_id: '',
-      status: 'pending',
-      priority: 'medium',
-      scheduled_date: new Date(),
-      assigned_technician_id: '',
-      description: '',
-      estimated_duration: 2,
-      total_amount: 0,
-      notes: ''
-    });
-    setFormErrors({});
-    setOpenDialog(true);
+    navigate('/jobs/new');
   };
 
-  const handleEditJob = (job: Job) => {
+  const handleEditJob = (job: JobListItem) => {
     setEditingJob(job);
     
     // Find the associated customer, service type, and technician IDs
@@ -314,8 +213,8 @@ const JobList: React.FC = () => {
       priority: job.priority,
       scheduled_date: new Date(job.scheduled_start || job.created_at),
       assigned_technician_id: technicianId,
-      description: job.description,
-      estimated_duration: job.estimated_duration,
+      description: job.description || '',
+      estimated_duration: job.estimated_duration || 0,
       total_amount: job.actual_cost || job.estimated_cost,
       notes: job.notes || ''
     });
@@ -327,10 +226,12 @@ const JobList: React.FC = () => {
   const handleDeleteJob = async (jobId: number) => {
     if (window.confirm('Are you sure you want to delete this job?')) {
       try {
-        // For demo, just remove from local state
-        setJobs(jobs.filter(job => job.id !== jobId));
+        await jobApi.delete(jobId);
+        // Reload jobs after successful deletion
+        await loadJobs();
       } catch (err) {
-        setError('Failed to delete job');
+        console.error('Error deleting job:', err);
+        setError('Failed to delete job. Please try again.');
       }
     }
   };
@@ -371,13 +272,33 @@ const JobList: React.FC = () => {
       if (!validateJobForm()) return;
       setSubmitting(true);
       
-      // For demo purposes, just show a success message
-      alert('Job saved successfully! (Demo mode - not persisted)');
+      const jobData = {
+        customer: parseInt(formData.customer_id),
+        property_address: formData.property_address,
+        service_type: serviceTypes.find(st => st.id.toString() === formData.service_type_id)?.name || '',
+        status: formData.status as Job['status'],
+        priority: formData.priority as Job['priority'],
+        scheduled_start: formData.scheduled_date,
+        assigned_to: formData.assigned_technician_id ? [parseInt(formData.assigned_technician_id)] : [],
+        description: formData.description,
+        estimated_duration: formData.estimated_duration,
+        estimated_cost: formData.total_amount,
+        notes: formData.notes
+      };
+
+      if (editingJob) {
+        await jobApi.update(editingJob.id, jobData);
+      } else {
+        await jobApi.create(jobData);
+      }
       
+      // Reload jobs after successful save
+      await loadJobs();
       setOpenDialog(false);
       setSubmitting(false);
     } catch (err) {
-      setError('Failed to save job');
+      console.error('Error saving job:', err);
+      setError('Failed to save job. Please try again.');
       setSubmitting(false);
     }
   };

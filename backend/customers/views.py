@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from fsm_core.cache_decorators import cache_customer_data, cache_model_list, cache_model_detail
+from fsm_core.cache_utils import CacheManager
 from .models import Customer, Property, CustomerContact, CustomerReview
 from .serializers import (
     CustomerSerializer, CustomerListSerializer, CustomerCreateSerializer,
@@ -24,6 +26,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
         elif self.action == 'create':
             return CustomerCreateSerializer
         return CustomerSerializer
+    
+    @cache_model_list(model_name='customer', per_user=True)
+    def list(self, request, *args, **kwargs):
+        """Cached customer list"""
+        return super().list(request, *args, **kwargs)
+    
+    @cache_model_detail()
+    def retrieve(self, request, *args, **kwargs):
+        """Cached customer detail"""
+        return super().retrieve(request, *args, **kwargs)
     
     def get_queryset(self):
         queryset = Customer.objects.prefetch_related('properties', 'contacts', 'reviews')
@@ -47,7 +59,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    def perform_create(self, serializer):
+        """Invalidate cache when creating customer"""
+        customer = serializer.save()
+        CacheManager.warm_customer_cache(customer.id)
+    
+    def perform_update(self, serializer):
+        """Invalidate cache when updating customer"""
+        customer = serializer.save()
+        CacheManager.invalidate_customer_cache(customer.id)
+        CacheManager.warm_customer_cache(customer.id)
+    
+    def perform_destroy(self, instance):
+        """Invalidate cache when deleting customer"""
+        CacheManager.invalidate_customer_cache(instance.id)
+        super().perform_destroy(instance)
+    
     @action(detail=True, methods=['get'])
+    @cache_customer_data()
     def properties(self, request, pk=None):
         """Get all properties for a customer"""
         customer = self.get_object()

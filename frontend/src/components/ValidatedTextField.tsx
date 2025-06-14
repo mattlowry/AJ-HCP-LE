@@ -3,7 +3,7 @@ import { TextField, TextFieldProps, InputAdornment } from '@mui/material';
 import { validateField, ValidationRule, formatPhoneNumber, formatCurrency } from '../utils/validation';
 
 interface ValidatedTextFieldProps extends Omit<TextFieldProps, 'error'> {
-  validationRules?: ValidationRule;
+  validationRules?: ValidationRule | ValidationRule[];
   onValidationChange?: (field: string, isValid: boolean, error?: string) => void;
   fieldName?: string;
   formatType?: 'phone' | 'currency' | 'none';
@@ -26,6 +26,17 @@ const ValidatedTextField: React.FC<ValidatedTextFieldProps> = ({
 
   const validateValue = React.useCallback((val: any) => {
     if (!validationRules) return null;
+    
+    // Handle array of validation rules
+    if (Array.isArray(validationRules)) {
+      for (const rule of validationRules) {
+        const error = validateField(val, rule);
+        if (error) return error;
+      }
+      return null;
+    }
+    
+    // Handle single validation rule
     return validateField(val, validationRules);
   }, [validationRules]);
 

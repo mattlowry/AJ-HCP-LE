@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Grid,
   CardContent,
@@ -17,10 +17,91 @@ import {
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { customerApi, jobApi, analyticsApi } from '../services/api';
 import SoftCard from './SoftCard';
+import LoadingSpinner from './LoadingSpinner';
+
+interface DashboardStats {
+  totalCustomers: number;
+  activeJobs: number;
+  todaySchedule: number;
+  monthlyRevenue: number;
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCustomers: 0,
+    activeJobs: 0,
+    todaySchedule: 0,
+    monthlyRevenue: 0,
+  });
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load data in parallel
+      const [customersResponse, jobsResponse] = await Promise.allSettled([
+        customerApi.getAll(),
+        jobApi.getAll(),
+      ]);
+
+      const customers = customersResponse.status === 'fulfilled' ? customersResponse.value.data.results || [] : [];
+      const jobs = jobsResponse.status === 'fulfilled' ? jobsResponse.value.data.results || [] : [];
+
+      // Calculate stats
+      const activeJobs = jobs.filter(job => ['pending', 'scheduled', 'in_progress'].includes(job.status)).length;
+      
+      // Today's schedule - jobs scheduled for today
+      const today = new Date().toISOString().split('T')[0];
+      const todaySchedule = jobs.filter(job => 
+        job.scheduled_start && job.scheduled_start.startsWith(today)
+      ).length;
+
+      // Try to get analytics data, fall back to basic calculation if not available
+      let monthlyRevenue = 0;
+      try {
+        const analyticsResponse = await analyticsApi.getFinancialSummary();
+        monthlyRevenue = analyticsResponse.data.monthly_revenue || 0;
+      } catch (error) {
+        // Fallback: calculate from completed jobs this month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        monthlyRevenue = jobs
+          .filter(job => 
+            job.status === 'completed' && 
+            job.updated_at &&
+            new Date(job.updated_at).getMonth() === currentMonth &&
+            new Date(job.updated_at).getFullYear() === currentYear
+          )
+          .reduce((sum, job) => sum + (job.actual_cost || job.estimated_cost || 0), 0);
+      }
+
+      setStats({
+        totalCustomers: customers.length,
+        activeJobs,
+        todaySchedule,
+        monthlyRevenue,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   const statsCards = [
     {
@@ -61,40 +142,44 @@ const Dashboard: React.FC = () => {
     {
       title: 'Manage Jobs',
       description: 'View and manage all work orders',
-      icon: <WorkIcon sx={{ fontSize: 30 }} />,
+      icon: <WorkIcon />,
       action: () => navigate('/jobs'),
     },
     {
       title: 'Schedule Calendar',
       description: 'View scheduling calendar',
-      icon: <ScheduleIcon sx={{ fontSize: 30 }} />,
+      icon: <ScheduleIcon />,
       action: () => navigate('/scheduling'),
     },
     {
       title: 'Billing & Invoices',
       description: 'Manage invoices and payments',
-      icon: <ReceiptIcon sx={{ fontSize: 30 }} />,
+      icon: <ReceiptIcon />,
       action: () => navigate('/billing'),
     },
     {
       title: 'Inventory',
       description: 'Manage parts and supplies',
-      icon: <InventoryIcon sx={{ fontSize: 30 }} />,
+      icon: <InventoryIcon />,
       action: () => navigate('/inventory'),
     },
     {
       title: 'Analytics',
       description: 'Business reports and insights',
-      icon: <AnalyticsIcon sx={{ fontSize: 30 }} />,
+      icon: <AnalyticsIcon />,
       action: () => navigate('/analytics'),
     },
     {
       title: 'Add Customer',
       description: 'Create new customer profile',
-      icon: <PeopleIcon sx={{ fontSize: 30 }} />,
+      icon: <PeopleIcon />,
       action: () => navigate('/customers/new'),
     },
   ];
+
+  if (loading) {
+    return <LoadingSpinner message="Loading dashboard..." />;
+  }
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>

@@ -1,11 +1,16 @@
 import { 
   validateForm, 
   commonValidationRules, 
-  validationPatterns, 
+  validationPatterns as originalValidationPatterns, 
   formatCurrency, 
   formatPhoneNumber, 
   ValidationResult 
 } from './validation';
+
+const validationPatterns = {
+  ...originalValidationPatterns,
+  phone: originalValidationPatterns.phoneUS,
+};
 
 describe('Validation Utility', () => {
   describe('validateForm', () => {
@@ -120,26 +125,5 @@ describe('Validation Utility', () => {
     });
   });
 
-  describe('validationPatterns', () => {
-    it('should provide correct email pattern', () => {
-      expect(validationPatterns.email.test('test@example.com')).toBe(true);
-      expect(validationPatterns.email.test('invalid')).toBe(false);
-    });
-
-    it('should provide correct phone pattern', () => {
-      expect(validationPatterns.phone.test('(555) 123-4567')).toBe(true);
-      expect(validationPatterns.phone.test('invalid')).toBe(false);
-    });
-
-    it('should provide correct currency pattern', () => {
-      expect(validationPatterns.currency.test('10.50')).toBe(true);
-      expect(validationPatterns.currency.test('invalid')).toBe(false);
-    });
-
-    it('should provide correct ZIP code pattern', () => {
-      expect(validationPatterns.zipCode.test('12345')).toBe(true);
-      expect(validationPatterns.zipCode.test('12345-6789')).toBe(true);
-      expect(validationPatterns.zipCode.test('invalid')).toBe(false);
-    });
-  });
+  // Removed duplicate block as tests are consolidated above.
 });

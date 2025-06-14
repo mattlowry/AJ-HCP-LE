@@ -14,5 +14,5 @@ router.register(r'inventory-adjustment-line-items', views.InventoryAdjustmentLin
 router.register(r'reports', views.InventoryReportsViewSet, basename='inventory-reports')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

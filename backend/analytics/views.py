@@ -301,7 +301,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             for tech in technicians:
                 # Get completed jobs
                 completed_jobs = Job.objects.filter(
-                    technicians=tech, 
+                    assigned_technician=tech, 
                     status='completed',
                     created_at__date__gte=thirty_days_ago
                 )
@@ -331,7 +331,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             from customers.models import CustomerReview
             
             # Get average review rating
-            avg_rating = CustomerReview.objects.filter(is_approved=True).aggregate(
+            avg_rating = CustomerReview.objects.aggregate(
                 avg_rating=Avg('rating')
             )['avg_rating'] or 0
             
@@ -777,12 +777,12 @@ class AnalyticsViewSet(viewsets.ViewSet):
             'first_time_fix_rate': self._calculate_first_time_fix_rate(),
             'technician_productivity': list(
                 Technician.objects.annotate(
-                    job_count=Count('jobs', filter=Q(jobs__created_at__date__gte=thirty_days_ago))
+                    job_count=Count('assigned_jobs', filter=Q(assigned_jobs__created_at__date__gte=thirty_days_ago))
                 ).values('id', 'user__first_name', 'user__last_name', 'job_count')[:10]
             ),
             'service_type_distribution': list(
                 ServiceType.objects.annotate(
-                    job_count=Count('jobs', filter=Q(jobs__created_at__date__gte=thirty_days_ago))
+                    job_count=Count('job', filter=Q(job__created_at__date__gte=thirty_days_ago))
                 ).values('name', 'job_count')
             ),
             'geographic_performance': self._calculate_geographic_performance(thirty_days_ago)

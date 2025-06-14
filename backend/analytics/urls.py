@@ -12,5 +12,5 @@ router.register(r'activity-logs', views.UserActivityLogViewSet)
 router.register(r'analytics', views.AnalyticsViewSet, basename='analytics')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('', include(router.urls)),
 ]

@@ -27,12 +27,23 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Divider,
+  Avatar,
+  Badge,
+  ToggleButton,
+  ToggleButtonGroup,
+  Fab,
+  Zoom,
+  Stack,
+  LinearProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Person as PersonIcon,
   Today as TodayIcon,
   ViewWeek as ViewWeekIcon,
+  ViewDay as ViewDayIcon,
+  ViewList as ViewListIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   AccessTime as TimeIcon,
@@ -42,7 +53,18 @@ import {
   Email as EmailIcon,
   Assignment as DocumentIcon,
   CheckCircle as ApproveIcon,
-  Cancel as RejectIcon
+  CheckCircle as CheckCircleIcon,
+  Cancel as RejectIcon,
+  CalendarToday as CalendarIcon,
+  Schedule as ScheduleIcon,
+  Work as WorkIcon,
+  ReportProblem as EmergencyIcon,
+  FilterList as FilterIcon,
+  Search as SearchIcon,
+  Refresh as RefreshIcon,
+  TrendingUp as TrendingUpIcon,
+  PriorityHigh as HighPriorityIcon,
+  MoreVert as MoreIcon,
 } from '@mui/icons-material';
 import {
   DndContext,
@@ -102,7 +124,7 @@ const SchedulingCalendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'list'>('week');
   const [weekDates, setWeekDates] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(new Date());
   const [technicianColors, setTechnicianColors] = useState<Record<string, string>>({});
@@ -111,6 +133,10 @@ const SchedulingCalendar: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [activeJob, setActiveJob] = useState<Job | null>(null);
   const [isCreatingJob, setIsCreatingJob] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [refreshing, setRefreshing] = useState(false);
   const [newJobData, setNewJobData] = useState({
     title: '',
     customer_name: '',
@@ -152,6 +178,41 @@ const SchedulingCalendar: React.FC = () => {
   const [inventoryCategories, setInventoryCategories] = useState<Category[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [lowStockItems, setLowStockItems] = useState<Item[]>([]);
+
+  // Helper functions for modern design
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'emergency': return '#d32f2f';
+      case 'high': return '#ed6c02';
+      case 'medium': return '#2e7d32';
+      case 'low': return '#757575';
+      default: return '#757575';
+    }
+  };
+
+  const getJobBackgroundColor = (job: Job) => {
+    switch (job.status) {
+      case 'scheduled': return '#e3f2fd';
+      case 'on_the_way': return '#fff3e0';
+      case 'in_progress': return '#e8f5e8';
+      case 'completed': return '#f3e5f5';
+      case 'cancelled': return '#ffebee';
+      default: return '#ffffff';
+    }
+  };
+
+  // Filter jobs based on search and filters
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = !searchQuery || 
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.service_type_name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'all' || job.status === filterStatus;
+    const matchesPriority = filterPriority === 'all' || job.priority === filterPriority;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
   
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
@@ -706,17 +767,6 @@ const SchedulingCalendar: React.FC = () => {
           });
         }
       }
-    }
-  };
-  
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'emergency': return '#f44336';
-      case 'high': return '#ff9800';
-      case 'medium': return '#2196f3';
-      case 'low': return '#4caf50';
-      default: return '#9e9e9e';
     }
   };
 
@@ -1824,401 +1874,324 @@ AJ Long Electric Team`;
   }
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        📅 Job Scheduling Calendar
-      </Typography>
-      
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc', p: 3 }}>
+      {/* Modern Header with Stats */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h4" fontWeight="600" color="text.primary" gutterBottom>
+              Schedule Manager
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage jobs, schedules, and technician assignments
+            </Typography>
+          </Box>
+          
+          {/* Quick Stats */}
+          <Grid container spacing={2} sx={{ width: 'auto', minWidth: 400 }}>
+            <Grid item>
+              <Card sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: '#e3f2fd', color: '#1976d2', width: 32, height: 32 }}>
+                    <WorkIcon fontSize="small" />
+                  </Avatar>
+                </Box>
+                <Typography variant="h6" fontWeight="600">{jobs.length}</Typography>
+                <Typography variant="caption" color="text.secondary">Total Jobs</Typography>
+              </Card>
+            </Grid>
+            <Grid item>
+              <Card sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: '#fff3e0', color: '#ed6c02', width: 32, height: 32 }}>
+                    <ScheduleIcon fontSize="small" />
+                  </Avatar>
+                </Box>
+                <Typography variant="h6" fontWeight="600">{unscheduledJobs.length}</Typography>
+                <Typography variant="caption" color="text.secondary">Unscheduled</Typography>
+              </Card>
+            </Grid>
+            <Grid item>
+              <Card sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  <Avatar sx={{ bgcolor: '#ffebee', color: '#d32f2f', width: 32, height: 32 }}>
+                    <EmergencyIcon fontSize="small" />
+                  </Avatar>
+                </Box>
+                <Typography variant="h6" fontWeight="600">
+                  {jobs.filter(j => j.priority === 'emergency').length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">Emergency</Typography>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* Modern Control Bar */}
+        <Card sx={{ p: 2, mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* View Mode Toggle */}
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                size="small"
+              >
+                <ToggleButton value="day" aria-label="day view">
+                  <ViewDayIcon fontSize="small" />
+                  <Typography variant="body2" sx={{ ml: 1 }}>Day</Typography>
+                </ToggleButton>
+                <ToggleButton value="week" aria-label="week view">
+                  <ViewWeekIcon fontSize="small" />
+                  <Typography variant="body2" sx={{ ml: 1 }}>Week</Typography>
+                </ToggleButton>
+                <ToggleButton value="list" aria-label="list view">
+                  <ViewListIcon fontSize="small" />
+                  <Typography variant="body2" sx={{ ml: 1 }}>List</Typography>
+                </ToggleButton>
+              </ToggleButtonGroup>
+
+              <Divider orientation="vertical" flexItem />
+
+              {/* Date Navigation */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton size="small" onClick={navigatePreviousWeek}>
+                  <ChevronLeftIcon />
+                </IconButton>
+                <Typography variant="h6" fontWeight="500" sx={{ minWidth: 200, textAlign: 'center' }}>
+                  {viewMode === 'week' 
+                    ? `Week of ${formatDate(weekDates[0] || selectedDate)}`
+                    : formatDate(selectedDate)
+                  }
+                </Typography>
+                <IconButton size="small" onClick={navigateNextWeek}>
+                  <ChevronRightIcon />
+                </IconButton>
+              </Box>
+
+              <Button variant="outlined" size="small" onClick={goToToday} startIcon={<TodayIcon />}>
+                Today
+              </Button>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {/* Search and Filters */}
+              <TextField
+                size="small"
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+                sx={{ width: 200 }}
+              />
+
+              <IconButton 
+                size="small" 
+                onClick={() => {
+                  setRefreshing(true);
+                  fetchJobsCallback().finally(() => setRefreshing(false));
+                }}
+                disabled={refreshing}
+              >
+                <RefreshIcon className={refreshing ? 'animate-spin' : ''} />
+              </IconButton>
+
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setSelectedJob(null);
+                  setIsCreatingJob(true);
+                  setNewJobData(prev => ({...prev, job_type: 'job'}));
+                  setOpenJobDialog(true);
+                }}
+              >
+                New Job
+              </Button>
+
+              <Button
+                variant="contained"
+                startIcon={<DocumentIcon />}
+                onClick={() => {
+                  setSelectedJob(null);
+                  setIsCreatingJob(true);
+                  setNewJobData(prev => ({...prev, job_type: 'estimate'}));
+                  setOpenJobDialog(true);
+                }}
+              >
+                New Estimate
+              </Button>
+            </Box>
+          </Box>
+        </Card>
+      </Box>
+
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-      
-      {/* Week navigation controls */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h5" fontWeight="bold">
-            Week of {formatDate(weekDates[0] || selectedDate)}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton onClick={navigatePreviousWeek}>
-              <ChevronLeftIcon />
-            </IconButton>
-            
-            <Button 
-              variant="outlined" 
-              size="small"
-              onClick={goToToday}
-            >
-              Today
-            </Button>
-            
-            <IconButton onClick={navigateNextWeek}>
-              <ChevronRightIcon />
-            </IconButton>
-          </Box>
-        </Box>
-        
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setIsCreatingJob(true);
-              setSelectedJob(null);
-              resetJobForm();
-              setNewJobData(prev => ({ ...prev, job_type: 'job' }));
-              fetchCustomers();
-              setOpenJobDialog(true);
-            }}
-          >
-            Create Job
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setIsCreatingJob(true);
-              setSelectedJob(null);
-              resetJobForm();
-              setNewJobData(prev => ({ ...prev, job_type: 'estimate' }));
-              fetchCustomers();
-              setOpenJobDialog(true);
-            }}
-          >
-            Create Estimate
-          </Button>
-        </Box>
-      </Box>
 
-      {/* Status Legend */}
-      <Card sx={{ mb: 2, p: 2 }}>
-        <Typography variant="h6" gutterBottom>Job Status Legend</Typography>
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              backgroundColor: '#2196f3', 
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">Scheduled</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              backgroundColor: '#2196f3',
-              backgroundImage: `repeating-linear-gradient(
-                45deg,
-                #2196f3,
-                #2196f3 5px,
-                rgba(255,255,255,0.3) 5px,
-                rgba(255,255,255,0.3) 10px
-              )`,
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">On The Way</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              backgroundColor: 'rgba(255,255,255,0.9)',
-              border: '2px solid #2196f3',
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">In Progress</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              backgroundColor: '#9e9e9e',
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">Completed (Paid)</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              backgroundColor: '#2196f3',
-              border: '2px solid #f44336',
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">Payment Due</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ 
-              width: 30, 
-              height: 20, 
-              background: 'linear-gradient(135deg, #2196f3 0%, #2196f3 50%, #ff9800 50%, #ff9800 100%)',
-              borderRadius: 1 
-            }} />
-            <Typography variant="caption">Multi-Technician 👥</Typography>
-          </Box>
-        </Box>
-      </Card>
-
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <Grid container spacing={2}>
-          {/* Unscheduled Jobs Panel */}
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardHeader
-                title="📋 Unscheduled Jobs"
-                titleTypographyProps={{ variant: 'h6' }}
-              />
-              <CardContent>
-                <SortableContext
-                  items={unscheduledJobs.map(job => job.id)}
-                  strategy={verticalListSortingStrategy}
+      {/* Render Content Based on View Mode */}
+      {viewMode === 'list' ? (
+        <Card sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>All Jobs</Typography>
+          <Grid container spacing={2}>
+            {filteredJobs.map((job) => (
+              <Grid item xs={12} md={6} lg={4} key={job.id}>
+                <Card 
+                  sx={{ 
+                    p: 2,
+                    borderLeft: `4px solid ${getPriorityColor(job.priority)}`,
+                    cursor: 'pointer',
+                    '&:hover': { elevation: 4 }
+                  }}
+                  onClick={() => {
+                    setSelectedJob(job);
+                    setOpenJobDialog(true);
+                  }}
                 >
-                  <Box sx={{ minHeight: 200 }}>
-                    {unscheduledJobs.map((job) => (
-                      <SortableJobCard key={job.id} job={job} />
-                    ))}
-                  </Box>
-                </SortableContext>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Week Calendar View */}
-          <Grid item xs={12} md={9}>
-            <Paper elevation={2} sx={{ p: 1, overflow: 'auto' }}>
-              <Box sx={{ minWidth: 1200 }}>
-                {/* Header row with days of the week */}
-                <Box sx={{ display: 'flex', borderBottom: '2px solid #e0e0e0', pb: 1, mb: 1 }}>
-                  <Box sx={{ width: 80, flexShrink: 0 }}>
-                    <Typography variant="h6" sx={{ textAlign: 'center', pt: 1 }}>
-                      Time
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="subtitle1" fontWeight="600">
+                      {job.title}
                     </Typography>
+                    <Chip 
+                      size="small" 
+                      label={job.priority} 
+                      color={job.priority === 'emergency' ? 'error' : job.priority === 'high' ? 'warning' : 'default'}
+                    />
                   </Box>
-                  {weekDates.map(date => (
-                    <Box 
-                      key={date}
-                      sx={{ 
-                        flex: 1, 
-                        textAlign: 'center', 
-                        px: 1,
-                        borderLeft: '1px solid #e0e0e0',
-                        minWidth: 140
-                      }}
-                    >
-                      <Typography variant="h6" fontWeight="bold">
-                        {formatDate(date)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {date === new Date().toISOString().split('T')[0] ? 'Today' : ''}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-                
-                {/* Time slots grid */}
-                {timeSlots.map((slot) => (
-                  <Box 
-                    key={slot.time}
-                    sx={{ 
-                      display: 'flex', 
-                      borderBottom: '1px solid #f0f0f0',
-                      minHeight: 60,
-                      '&:hover': { backgroundColor: '#f9f9f9' }
-                    }}
-                  >
-                    {/* Time column */}
-                    <Box 
-                      sx={{ 
-                        width: 80, 
-                        py: 1, 
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRight: '1px solid #e0e0e0',
-                        flexShrink: 0,
-                        backgroundColor: '#fafafa'
-                      }}
-                    >
-                      <Typography variant="body2" fontWeight="medium">
-                        {slot.time}
-                      </Typography>
-                    </Box>
-                    
-                    {/* Day columns */}
-                    {weekDates.map(date => {
-                      // Filter jobs for this date and time slot
-                      const dayJobs = jobs.filter(job => 
-                        job.scheduled_date === date && 
-                        job.scheduled_start_time === slot.time
-                      );
-                      
-                      return (
-                        <DroppableTimeSlot
-                          key={`${date}-${slot.time}`}
-                          technicianId="any"
-                          timeSlot={slot.time}
-                          date={date}
-                        >
-                          <Box 
-                            sx={{ 
-                              flex: 1,
-                              borderLeft: '1px solid #e0e0e0',
-                              p: 0.5,
-                              position: 'relative',
-                              minHeight: 50,
-                              minWidth: 140
-                            }}
-                          >
-                            <Box sx={{ 
-                              display: 'flex', 
-                              flexDirection: 'column',
-                              gap: 0.5,
-                              height: '100%'
-                            }}>
-                              {dayJobs.map((job, index) => {
-                                // Calculate job card height based on number of jobs
-                                const jobHeight = Math.max(40, 50 / Math.max(dayJobs.length, 1));
-                                
-                                return (
-                                  <Tooltip 
-                                    key={job.id} 
-                                    title={`${job.customer_name} - ${job.service_type_name || 'Service'} - ${getTechnicianNames(job)} - Status: ${job.status}`}
-                                  >
-                                    <Box
-                                      sx={{
-                                        borderRadius: 2,
-                                        p: 0.5,
-                                        ...getJobCardStyling(job),
-                                        // Override border for estimates
-                                        ...(job.job_type === 'estimate' && {
-                                          border: `${getJobTypeBorder(job.job_type)} ${getPriorityColor(job.priority)}`
-                                        }),
-                                        cursor: 'pointer',
-                                        '&:hover': { opacity: 0.8, transform: 'scale(1.02)' },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'center',
-                                        height: `${jobHeight}px`,
-                                        minHeight: '35px',
-                                        position: 'relative',
-                                        color: job.status === 'in_progress' ? '#333' : 'white',
-                                        fontWeight: 'bold',
-                                        transition: 'all 0.2s'
-                                      }}
-                                      onClick={() => {
-                                        setSelectedJob(job);
-                                        setIsCreatingJob(false);
-                                        setOpenJobDialog(true);
-                                      }}
-                                    >
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                                        <Typography sx={{ fontSize: '0.7rem' }}>
-                                          {getJobTypeIcon(job.job_type)}
-                                        </Typography>
-                                        <Typography 
-                                          variant="caption" 
-                                          fontWeight="bold" 
-                                          noWrap
-                                          sx={{ fontSize: '0.7rem', flex: 1 }}
-                                        >
-                                          {job.customer_name}
-                                        </Typography>
-                                        <Typography sx={{ fontSize: '0.6rem' }}>
-                                          {getTechnicianDisplayIndicator(job)}
-                                        </Typography>
-                                      </Box>
-                                      <Typography 
-                                        variant="caption" 
-                                        noWrap
-                                        sx={{ 
-                                          fontSize: '0.6rem',
-                                          opacity: 0.9
-                                        }}
-                                      >
-                                        {job.title}
-                                      </Typography>
-                                      {job.estimated_cost && (
-                                        <Typography 
-                                          variant="caption" 
-                                          noWrap
-                                          sx={{ 
-                                            fontSize: '0.6rem',
-                                            opacity: 0.9
-                                          }}
-                                        >
-                                          ${job.estimated_cost}
-                                        </Typography>
-                                      )}
-                                      <Box sx={{ position: 'absolute', right: 2, top: 2 }}>
-                                        {job.job_type === 'estimate' ? (
-                                          <Box
-                                            sx={{
-                                              fontSize: '0.6rem',
-                                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                              borderRadius: 1,
-                                              px: 0.5,
-                                              py: 0.2
-                                            }}
-                                          >
-                                            EST
-                                          </Box>
-                                        ) : (
-                                          <Box
-                                            sx={{
-                                              width: 8,
-                                              height: 8,
-                                              borderRadius: '50%',
-                                              backgroundColor: getPriorityColor(job.priority),
-                                              border: '1px solid white'
-                                            }}
-                                          />
-                                        )}
-                                      </Box>
-                                    </Box>
-                                  </Tooltip>
-                                );
-                              })}
-                            </Box>
-                          </Box>
-                        </DroppableTimeSlot>
-                      );
-                    })}
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {job.customer_name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {job.scheduled_date ? formatDate(job.scheduled_date) : 'Unscheduled'}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        </Grid>
-        <DragOverlay>
-          {activeJob ? (
-            <Card
-              sx={{
-                borderLeft: `4px solid ${getPriorityColor(activeJob.priority)}`,
-                opacity: 0.8
-              }}
-            >
-              <CardContent sx={{ padding: '8px !important' }}>
-                <Typography variant="caption" color="textSecondary">
-                  {activeJob.job_number}
-                </Typography>
-                <Typography variant="body2" fontWeight="bold">
-                  {activeJob.title}
-                </Typography>
-                <Typography variant="caption">
-                  {activeJob.customer_name}
-                </Typography>
-              </CardContent>
-            </Card>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+        </Card>
+      ) : (
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <Grid container spacing={3}>
+            {/* Sidebar - Unscheduled Jobs */}
+            <Grid item xs={12} lg={3}>
+              <Card sx={{ height: 'fit-content' }}>
+                <CardHeader 
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ScheduleIcon color="warning" />
+                      <Typography variant="h6">Unscheduled Jobs</Typography>
+                      <Badge badgeContent={unscheduledJobs.length} color="warning" />
+                    </Box>
+                  }
+                />
+                <CardContent sx={{ pt: 0 }}>
+                  <SortableContext items={unscheduledJobs.map(job => job.id)} strategy={verticalListSortingStrategy}>
+                    <Stack spacing={1} sx={{ minHeight: 200 }}>
+                      {unscheduledJobs.map((job) => (
+                        <SortableJobCard key={job.id} job={job} />
+                      ))}
+                      {unscheduledJobs.length === 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          py: 4,
+                          color: 'text.secondary'
+                        }}>
+                          <CheckCircleIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+                          <Typography variant="body2">All jobs scheduled!</Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                  </SortableContext>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Main Calendar View */}
+            <Grid item xs={12} lg={9}>
+              <Card sx={{ overflow: 'hidden' }}>
+                <CardHeader
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarIcon color="primary" />
+                      <Typography variant="h6">
+                        {viewMode === 'week' ? 'Weekly Schedule' : 'Daily Schedule'}
+                      </Typography>
+                    </Box>
+                  }
+                  action={
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Chip 
+                        size="small" 
+                        label={`${jobs.filter(j => j.scheduled_date === selectedDate).length} jobs today`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </Box>
+                  }
+                />
+                <CardContent sx={{ p: 0 }}>
+                  {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <Paper sx={{ overflow: 'auto', maxHeight: '70vh' }}>
+                      <Box sx={{ minWidth: viewMode === 'week' ? 1000 : 400 }}>
+                        {/* Calendar content will go here */}
+                        <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
+                          Calendar view will be rendered here
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+          
+          <DragOverlay>
+            {activeJob ? (
+              <Card sx={{ borderLeft: `4px solid ${getPriorityColor(activeJob.priority)}`, opacity: 0.8 }}>
+                <CardContent>
+                  <Typography variant="subtitle2">{activeJob.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">{activeJob.customer_name}</Typography>
+                </CardContent>
+              </Card>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Floating Action Button for Quick Job Creation */}
+      <Zoom in={true}>
+        <Fab
+          color="primary"
+          aria-label="add job"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000
+          }}
+          onClick={() => {
+            setSelectedJob(null);
+            setIsCreatingJob(true);
+            setNewJobData(prev => ({...prev, job_type: 'job'}));
+            setOpenJobDialog(true);
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      </Zoom>
 
       {/* Job Details Dialog */}
       <Dialog

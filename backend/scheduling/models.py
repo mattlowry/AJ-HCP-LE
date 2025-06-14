@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from jobs.models import Technician, Job
 from customers.models import Customer, Property
@@ -41,7 +41,7 @@ class TechnicianAvailability(models.Model):
     end_time = models.TimeField()
     availability_type = models.CharField(max_length=20, choices=AVAILABILITY_TYPE_CHOICES, default='available')
     notes = models.TextField(blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -115,7 +115,7 @@ class Appointment(models.Model):
     customer_property = models.ForeignKey(Property, on_delete=models.CASCADE, null=True, blank=True, related_name='appointments')
     
     # Metadata
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_appointments')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_appointments')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -231,7 +231,7 @@ class ScheduleConflict(models.Model):
     # Resolution tracking
     detected_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
-    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.get_conflict_type_display()} - {self.job.job_number}"
@@ -272,7 +272,7 @@ class ScheduleOptimization(models.Model):
     
     # Metadata
     optimization_notes = models.TextField(blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"Optimization {self.optimization_date} - {self.technician.user.get_full_name()}"

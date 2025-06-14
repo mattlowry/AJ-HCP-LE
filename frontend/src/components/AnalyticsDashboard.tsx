@@ -129,9 +129,9 @@ const AnalyticsDashboard: React.FC = () => {
       
       // Fetch data from backend in parallel
       const [businessOverviewResponse, financialSummaryResponse, operationalMetricsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/analytics/business_overview/`),
-        axios.get(`${API_BASE_URL}/analytics/financial_summary/`),
-        axios.get(`${API_BASE_URL}/analytics/operational_metrics/`),
+        axios.get(`${API_BASE_URL}/analytics/analytics/business_overview/`),
+        axios.get(`${API_BASE_URL}/analytics/analytics/financial_summary/`),
+        axios.get(`${API_BASE_URL}/analytics/analytics/operational_metrics/`),
       ]);
       
       // Set business metrics

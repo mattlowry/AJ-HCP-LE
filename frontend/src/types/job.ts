@@ -31,9 +31,18 @@ export interface JobListItem {
   job_number: string;
   title: string;
   customer_name: string;
-  property_address: string;
+  property_address: string;  
   status: string;
   priority: string;
   scheduled_start?: string;
   estimated_cost: number;
+  // Add commonly used properties from Job interface
+  service_type?: string;
+  description?: string;
+  estimated_duration?: number;
+  assigned_technicians?: string[];
+  actual_cost?: number;
+  notes?: string;
+  updated_at?: string;
+  created_at?: string;
 }

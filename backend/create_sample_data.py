@@ -10,9 +10,11 @@ sys.path.append('/Users/matthewlong/AJ-HCP-LE/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fsm_core.settings')
 django.setup()
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from jobs.models import Technician, ServiceType, Job
 from customers.models import Customer, Property
+
+User = get_user_model()
 from datetime import date, time, datetime
 
 def create_sample_data():
