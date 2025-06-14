@@ -1,6 +1,7 @@
 import { errorLogger, ErrorType, withErrorHandling } from './errorHandling';
 
 describe('ErrorLogger', () => {
+<<<<<<< HEAD:frontend/src/utils/errorHandling.test.ts.skip
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -11,55 +12,100 @@ describe('ErrorLogger', () => {
     });
   });
 
+=======
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+    errorLogger.clearErrors();
+  });
+
+  describe('errorLogger instance', () => {
+    it('should be available as singleton', () => {
+      expect(errorLogger).toBeDefined();
+      expect(typeof errorLogger.logError).toBe('function');
+    });
+  });
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
 
   describe('logError', () => {
-    beforeEach(() => {
-      // Mock console methods
-      jest.spyOn(console, 'error').mockImplementation();
-      jest.spyOn(console, 'warn').mockImplementation();
-      jest.spyOn(console, 'log').mockImplementation();
-    });
-
-    it('should log error with correct details', () => {
-      const errorDetails = {
+    it('should log an error with correct details', () => {
+      const error = {
         message: 'Test error',
         userMessage: 'Something went wrong',
-        component: 'TestComponent',
-        action: 'testAction'
+        type: ErrorType.NETWORK
       };
-
-      const loggedError = errorLogger.logError(errorDetails);
-
-      expect(loggedError.id).toBeDefined();
-      expect(loggedError.timestamp).toBeDefined();
+      
+      const loggedError = errorLogger.logError(error);
+      
       expect(loggedError.message).toBe('Test error');
       expect(loggedError.userMessage).toBe('Something went wrong');
+<<<<<<< HEAD:frontend/src/utils/errorHandling.test.ts.skip
       expect(loggedError.component).toBe('TestComponent');
       expect(loggedError.action).toBe('testAction');
       expect(loggedError.type).toBe(ErrorType.SYSTEM);
+=======
+      expect(loggedError.type).toBe(ErrorType.NETWORK);
+      expect(loggedError.id).toBeDefined();
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
     });
 
-    it('should categorize error based on error object', () => {
-      const errorDetails = {
+    it('should store error in history', () => {
+      const error = {
+        message: 'Test error',
+        userMessage: 'Something went wrong'
+      };
+      
+      errorLogger.logError(error);
+      const errors = errorLogger.getErrors();
+      
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toBe('Test error');
+    });
+
+    it('should generate unique error IDs', () => {
+      const error1 = errorLogger.logError({
+        message: 'Error 1',
+        userMessage: 'Error 1'
+      });
+      
+      const error2 = errorLogger.logError({
+        message: 'Error 2', 
+        userMessage: 'Error 2'
+      });
+      
+      expect(error1.id).not.toBe(error2.id);
+    });
+
+  });
+
+  describe('getErrors', () => {
+    it('should return filtered errors by type', () => {
+      errorLogger.logError({
         message: 'Network error',
         userMessage: 'Connection failed',
-        error: { code: 'NETWORK_ERROR' }
-      };
+        type: ErrorType.NETWORK
+      });
+      
+      errorLogger.logError({
+        message: 'Validation error',
+        userMessage: 'Invalid input',
+        type: ErrorType.VALIDATION
+      });
 
-      const loggedError = errorLogger.logError(errorDetails);
-      expect(loggedError.type).toBe(ErrorType.NETWORK);
+      const networkErrors = errorLogger.getErrors({ type: ErrorType.NETWORK });
+      expect(networkErrors).toHaveLength(1);
+      expect(networkErrors[0].type).toBe(ErrorType.NETWORK);
     });
 
-    it('should include stack trace if available', () => {
-      const error = new Error('Test error');
-      const errorDetails = {
+    it('should clear errors', () => {
+      errorLogger.logError({
         message: 'Test error',
-        userMessage: 'Something went wrong',
-        error
-      };
-
-      const loggedError = errorLogger.logError(errorDetails);
-      expect(loggedError.stack).toBe(error.stack);
+        userMessage: 'Test message'
+      });
+      
+      expect(errorLogger.getErrors()).toHaveLength(1);
+      errorLogger.clearErrors();
+      expect(errorLogger.getErrors()).toHaveLength(0);
     });
   });
 
@@ -94,7 +140,12 @@ describe('ErrorLogger', () => {
       };
 
       const errorDetails = errorLogger.handleError(axiosError);
+<<<<<<< HEAD:frontend/src/utils/errorHandling.test.ts.skip
       expect(errorDetails.type).toBe(ErrorType.VALIDATION);
+=======
+      expect(errorDetails.type).toBe(ErrorType.BUSINESS_LOGIC);
+      expect(errorDetails.metadata?.status).toBe(400);
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
     });
   });
 });
@@ -110,8 +161,13 @@ describe('withErrorHandling', () => {
       message: 'Test error',
       userMessage: 'Something went wrong',
       type: ErrorType.SYSTEM,
+<<<<<<< HEAD:frontend/src/utils/errorHandling.test.ts.skip
       component: 'TestComponent'
     } as any));
+=======
+      severity: 'MEDIUM' as any
+    }));
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations):frontend/src/utils/errorHandling.test.ts
   });
 
   afterEach(() => {

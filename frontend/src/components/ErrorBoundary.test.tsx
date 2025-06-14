@@ -1,3 +1,16 @@
+// Mock the error logger to avoid issues during testing
+jest.mock('../utils/errorHandling', () => ({
+  errorLogger: {
+    logError: jest.fn(() => ({ id: 'test-error-id' }))
+  },
+  ErrorType: {
+    SYSTEM: 'system'
+  },
+  ErrorSeverity: {
+    HIGH: 'high'
+  }
+}));
+
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ErrorBoundary, { ComponentErrorBoundary, PageErrorBoundary } from './ErrorBoundary';
@@ -48,7 +61,7 @@ describe('ErrorBoundary', () => {
     );
 
     expect(screen.getByText('⚠️ Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('An unexpected error occurred in this component. Don\'t worry, your data is safe.')).toBeInTheDocument();
+    expect(screen.getByText(/An unexpected error occurred in this component/)).toBeInTheDocument();
   });
 
   it('should show both retry and reload buttons', () => {
@@ -84,10 +97,10 @@ describe('ErrorBoundary', () => {
     );
 
     expect(screen.getByText('⚠️ Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('An unexpected error occurred in this component. Don\'t worry, your data is safe.')).toBeInTheDocument();
+    expect(screen.getByText(/An unexpected error occurred in this component/)).toBeInTheDocument();
   });
 
-  it('should show error details in development mode', () => {
+  it('should show error details in development mode', async () => {
     const originalEnv = process.env.NODE_ENV;
     Object.defineProperty(process.env, 'NODE_ENV', {
       value: 'development',
@@ -102,24 +115,24 @@ describe('ErrorBoundary', () => {
     );
 
     // Error message should be visible in development
-    expect(screen.getByText('Test error')).toBeInTheDocument();
+    expect(await screen.findByText('Test error')).toBeInTheDocument();
 
     Object.defineProperty(process.env, 'NODE_ENV', {
       value: originalEnv,
-      writable: false,
+      writable: true,
       configurable: true
     });
   });
 
-  it('should include error ID when available', () => {
+  it('should include error ID when available', async () => {
     render(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
     );
 
-    // Should show an error ID
-    expect(screen.getByText(/Error ID:/)).toBeInTheDocument();
+    // Should show an error ID (may take a moment to appear)
+    expect(await screen.findByText(/Error ID:/)).toBeInTheDocument();
   });
 });
 

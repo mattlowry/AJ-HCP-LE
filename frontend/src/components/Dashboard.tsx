@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Grid,
-  Card,
   CardContent,
   Typography,
   Box,
-  Button,
-  Paper,
   Avatar,
-  Chip,
-  LinearProgress,
-  IconButton,
-  Divider
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -22,357 +15,334 @@ import {
   Inventory as InventoryIcon,
   Analytics as AnalyticsIcon,
   TrendingUp as TrendingUpIcon,
-  Add as AddIcon,
-  ArrowForward as ArrowForwardIcon,
-  CheckCircle as CheckCircleIcon,
-  Schedule as PendingIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { customerApi, jobApi, billingApi, analyticsApi } from '../services/api';
+import SoftCard from './SoftCard';
+import LoadingSpinner from './LoadingSpinner';
+
+interface DashboardStats {
+  totalCustomers: number;
+  activeJobs: number;
+  todaySchedule: number;
+  monthlyRevenue: number;
+}
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCustomers: 0,
+    activeJobs: 0,
+    todaySchedule: 0,
+    monthlyRevenue: 0,
+  });
 
-  // Enhanced stats with trends
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load data in parallel
+      const [customersResponse, jobsResponse] = await Promise.allSettled([
+        customerApi.getAll(),
+        jobApi.getAll(),
+      ]);
+
+      const customers = customersResponse.status === 'fulfilled' ? customersResponse.value.data.results || [] : [];
+      const jobs = jobsResponse.status === 'fulfilled' ? jobsResponse.value.data.results || [] : [];
+
+      // Calculate stats
+      const activeJobs = jobs.filter(job => ['pending', 'scheduled', 'in_progress'].includes(job.status)).length;
+      
+      // Today's schedule - jobs scheduled for today
+      const today = new Date().toISOString().split('T')[0];
+      const todaySchedule = jobs.filter(job => 
+        job.scheduled_start && job.scheduled_start.startsWith(today)
+      ).length;
+
+      // Try to get analytics data, fall back to basic calculation if not available
+      let monthlyRevenue = 0;
+      try {
+        const analyticsResponse = await analyticsApi.getFinancialSummary();
+        monthlyRevenue = analyticsResponse.data.monthly_revenue || 0;
+      } catch (error) {
+        // Fallback: calculate from completed jobs this month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        monthlyRevenue = jobs
+          .filter(job => 
+            job.status === 'completed' && 
+            job.updated_at &&
+            new Date(job.updated_at).getMonth() === currentMonth &&
+            new Date(job.updated_at).getFullYear() === currentYear
+          )
+          .reduce((sum, job) => sum + (job.actual_cost || job.estimated_cost || 0), 0);
+      }
+
+      setStats({
+        totalCustomers: customers.length,
+        activeJobs,
+        todaySchedule,
+        monthlyRevenue,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
   const statsCards = [
     {
       title: 'Total Customers',
-      value: '127',
+      value: stats.totalCustomers.toString(),
       change: '+12%',
-      trend: 'up',
       icon: <PeopleIcon />,
-      color: '#1976d2',
-      bgColor: '#e3f2fd',
+      gradient: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+      bgColor: 'rgba(74, 144, 226, 0.1)',
     },
     {
       title: 'Active Jobs',
-      value: '23',
+      value: stats.activeJobs.toString(),
       change: '+8%',
-      trend: 'up',
       icon: <WorkIcon />,
-      color: '#2e7d32',
-      bgColor: '#e8f5e8',
+      gradient: 'linear-gradient(135deg, #51C878 0%, #3A9B5C 100%)',
+      bgColor: 'rgba(81, 200, 120, 0.1)',
     },
     {
       title: 'Today\'s Schedule',
-      value: '6',
-      change: '2 pending',
-      trend: 'neutral',
+      value: stats.todaySchedule.toString(),
+      change: '+5%',
       icon: <ScheduleIcon />,
-      color: '#ed6c02',
-      bgColor: '#fff3e0',
+      gradient: 'linear-gradient(135deg, #FFD93D 0%, #E6C234 100%)',
+      bgColor: 'rgba(255, 217, 61, 0.1)',
     },
     {
       title: 'Monthly Revenue',
-      value: '$18,420',
-      change: '+15%',
-      trend: 'up',
+      value: formatCurrency(stats.monthlyRevenue),
+      change: '+18%',
       icon: <MoneyIcon />,
-      color: '#9c27b0',
-      bgColor: '#f3e5f5',
+      gradient: 'linear-gradient(135deg, #FF6B6B 0%, #E55555 100%)',
+      bgColor: 'rgba(255, 107, 107, 0.1)',
     },
-  ];
-
-  const recentJobs = [
-    {
-      id: 1,
-      title: 'Kitchen Outlet Repair',
-      customer: 'John Smith',
-      status: 'in_progress',
-      priority: 'high',
-      scheduled: '2024-01-15T09:00:00Z'
-    },
-    {
-      id: 2,
-      title: 'Panel Installation',
-      customer: 'Sarah Davis',
-      status: 'scheduled',
-      priority: 'medium',
-      scheduled: '2024-01-15T14:00:00Z'
-    },
-    {
-      id: 3,
-      title: 'Emergency Service',
-      customer: 'Robert Brown',
-      status: 'completed',
-      priority: 'emergency',
-      scheduled: '2024-01-14T16:00:00Z'
-    }
   ];
 
   const quickActions = [
     {
-      title: 'Create Job',
-      description: 'Schedule new work order',
-      icon: <AddIcon />,
-      action: () => navigate('/jobs/new'),
-      color: '#1976d2',
-      primary: true
-    },
-    {
-      title: 'Add Customer',
-      description: 'Create customer profile',
-      icon: <PeopleIcon />,
-      action: () => navigate('/customers/new'),
-      color: '#2e7d32',
-      primary: true
-    },
-    {
-      title: 'View Schedule',
-      description: 'Today\'s appointments',
-      icon: <ScheduleIcon />,
-      action: () => navigate('/scheduling'),
-      color: '#ed6c02'
-    },
-    {
       title: 'Manage Jobs',
-      description: 'All work orders',
+      description: 'View and manage all work orders',
       icon: <WorkIcon />,
       action: () => navigate('/jobs'),
-      color: '#1976d2'
     },
     {
-      title: 'View Analytics',
-      description: 'Business insights',
-      icon: <AnalyticsIcon />,
-      action: () => navigate('/analytics'),
-      color: '#9c27b0'
+      title: 'Schedule Calendar',
+      description: 'View scheduling calendar',
+      icon: <ScheduleIcon />,
+      action: () => navigate('/scheduling'),
+    },
+    {
+      title: 'Billing & Invoices',
+      description: 'Manage invoices and payments',
+      icon: <ReceiptIcon />,
+      action: () => navigate('/billing'),
     },
     {
       title: 'Inventory',
-      description: 'Parts and supplies',
+      description: 'Manage parts and supplies',
       icon: <InventoryIcon />,
       action: () => navigate('/inventory'),
-      color: '#1976d2'
-    }
+    },
+    {
+      title: 'Analytics',
+      description: 'Business reports and insights',
+      icon: <AnalyticsIcon />,
+      action: () => navigate('/analytics'),
+    },
+    {
+      title: 'Add Customer',
+      description: 'Create new customer profile',
+      icon: <PeopleIcon />,
+      action: () => navigate('/customers/new'),
+    },
   ];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'in_progress': return 'primary';
-      case 'scheduled': return 'info';
-      case 'pending': return 'warning';
-      default: return 'default';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'emergency': return 'error';
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
-    }
-  };
+  if (loading) {
+    return <LoadingSpinner message="Loading dashboard..." />;
+  }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Dashboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary" data-testid="welcome-message">
-            Welcome back! Here's what's happening with your business today.
-          </Typography>
-        </Box>
-        <Box display="flex" gap={2}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/jobs/new')}
-            data-testid="action-create-job"
-          >
-            Create Job
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<PeopleIcon />}
-            onClick={() => navigate('/customers/new')}
-            data-testid="action-add-customer"
-          >
-            Add Customer
-          </Button>
-        </Box>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #2E5A8A 0%, #4A90E2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 1,
+          }}
+        >
+          Dashboard
+        </Typography>
+        <Typography 
+          variant="h6" 
+          color="text.secondary" 
+          sx={{ fontWeight: 400 }}
+        >
+          Welcome back! Here's what's happening with your business today.
+        </Typography>
       </Box>
       
-      {/* Enhanced Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }} data-testid="metrics-container">
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 5 }}>
         {statsCards.map((card, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card 
-              sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}
-              data-testid={`metric-${card.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+          <Grid item xs={12} sm={6} lg={3} key={index}>
+            <SoftCard 
+              variant="elevated" 
+              glow
+              sx={{
+                height: '100%',
+                background: `linear-gradient(135deg, ${card.bgColor} 0%, rgba(255, 255, 255, 0.8) 100%)`,
+                '&:hover': {
+                  transform: 'translateY(-4px) scale(1.02)',
+                }
+              }}
             >
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                  <Box
+                  <Avatar
                     sx={{
                       width: 56,
                       height: 56,
-                      borderRadius: 2,
-                      backgroundColor: card.bgColor,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: card.color
+                      background: card.gradient,
+                      boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
                     }}
                   >
                     {card.icon}
+                  </Avatar>
+                  <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    sx={{ 
+                      color: '#51C878',
+                      backgroundColor: 'rgba(81, 200, 120, 0.1)',
+                      borderRadius: '12px',
+                      px: 1.5,
+                      py: 0.5,
+                    }}
+                  >
+                    <TrendingUpIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      {card.change}
+                    </Typography>
                   </Box>
-                  {card.trend === 'up' && (
-                    <Chip
-                      icon={<TrendingUpIcon />}
-                      label={card.change}
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                    />
-                  )}
-                  {card.trend === 'neutral' && (
-                    <Chip
-                      label={card.change}
-                      size="small"
-                      color="default"
-                      variant="outlined"
-                    />
-                  )}
                 </Box>
-                <Typography variant="h4" component="h2" fontWeight="bold" mb={1}>
-                  {card.value}
-                </Typography>
-                <Typography color="text.secondary" variant="body2">
+                <Typography 
+                  color="text.secondary" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    mb: 1,
+                  }}
+                >
                   {card.title}
                 </Typography>
+                <Typography 
+                  variant="h4" 
+                  component="div"
+                  sx={{ 
+                    fontWeight: 700,
+                    color: '#202124',
+                  }}
+                >
+                  {card.value}
+                </Typography>
               </CardContent>
-            </Card>
+            </SoftCard>
           </Grid>
         ))}
       </Grid>
 
+      {/* Quick Actions */}
+      <Typography 
+        variant="h5" 
+        component="h2" 
+        sx={{ 
+          fontWeight: 600,
+          mb: 3,
+          color: '#202124',
+        }}
+      >
+        Quick Actions
+      </Typography>
       <Grid container spacing={3}>
-        {/* Quick Actions */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h6">Quick Actions</Typography>
-              </Box>
-              <Grid container spacing={2}>
-                {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        height: '100%',
-                        '&:hover': {
-                          borderColor: action.color,
-                          boxShadow: 1,
-                          transform: 'translateY(-2px)'
-                        },
-                      }}
-                      onClick={action.action}
-                    >
-                      <Box display="flex" alignItems="center" mb={1}>
-                        <Avatar
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            bgcolor: action.primary ? action.color : 'transparent',
-                            color: action.primary ? 'white' : action.color,
-                            mr: 1
-                          }}
-                        >
-                          {action.icon}
-                        </Avatar>
-                        <Typography variant="subtitle2" fontWeight="medium">
-                          {action.title}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {action.description}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Recent Jobs */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h6">Recent Jobs</Typography>
-                <IconButton onClick={() => navigate('/jobs')} size="small">
-                  <ArrowForwardIcon />
-                </IconButton>
-              </Box>
-              <Box>
-                {recentJobs.map((job, index) => (
-                  <Box key={job.id}>
-                    <Box
-                      sx={{
-                        py: 2,
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'action.hover' },
-                        borderRadius: 1
-                      }}
-                      onClick={() => navigate('/jobs')}
-                    >
-                      <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                        <Typography variant="subtitle2" fontWeight="medium" noWrap>
-                          {job.title}
-                        </Typography>
-                        <Chip
-                          label={job.status.replace('_', ' ')}
-                          size="small"
-                          color={getStatusColor(job.status) as any}
-                          variant="outlined"
-                        />
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" mb={1}>
-                        {job.customer}
-                      </Typography>
-                      <Box display="flex" alignItems="center" justifyContent="space-between">
-                        <Chip
-                          label={job.priority}
-                          size="small"
-                          color={getPriorityColor(job.priority) as any}
-                          variant="filled"
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(job.scheduled).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    {index < recentJobs.length - 1 && <Divider />}
-                  </Box>
-                ))}
-              </Box>
-              <Box mt={2}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => navigate('/jobs')}
-                  endIcon={<ArrowForwardIcon />}
+        {quickActions.map((action, index) => (
+          <Grid item xs={12} sm={6} lg={4} key={index}>
+            <SoftCard 
+              variant="glass" 
+              sx={{ 
+                height: '100%', 
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-6px) scale(1.02)',
+                  boxShadow: '0px 12px 40px rgba(74, 144, 226, 0.15)',
+                }
+              }} 
+              onClick={action.action}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box display="flex" alignItems="center" mb={2.5}>
+                  <Avatar
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      background: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+                      mr: 2,
+                      boxShadow: '0px 4px 12px rgba(74, 144, 226, 0.3)',
+                    }}
+                  >
+                    {action.icon}
+                  </Avatar>
+                  <Typography 
+                    variant="h6" 
+                    component="div"
+                    sx={{ 
+                      fontWeight: 600,
+                      color: '#202124',
+                    }}
+                  >
+                    {action.title}
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    lineHeight: 1.6,
+                  }}
                 >
-                  View All Jobs
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+                  {action.description}
+                </Typography>
+              </CardContent>
+            </SoftCard>
+          </Grid>
+        ))}
       </Grid>
     </Box>
   );

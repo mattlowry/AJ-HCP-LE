@@ -103,12 +103,12 @@ const PerformanceMonitor: React.FC = () => {
         name: resource.name.split('/').pop() || resource.name,
         duration: resource.duration,
         size: (resource as any).transferSize,
-        type: (resource as any).initiatorType
+        type: (resource as any).initiatorType || 'unknown'
       })).sort((a, b) => b.duration - a.duration).slice(0, 10);
 
       const metrics: PerformanceMetrics = {
-        loadTime: navigation?.loadEventEnd - navigation?.fetchStart || 0,
-        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+        loadTime: navigation?.loadEventEnd ? navigation.loadEventEnd - navigation.fetchStart : 0,
+        domContentLoaded: timing.domContentLoadedEventEnd - timing.fetchStart,
         firstContentfulPaint: fcp,
         largestContentfulPaint: lcp,
         cumulativeLayoutShift: 0, // Would need CLS observer

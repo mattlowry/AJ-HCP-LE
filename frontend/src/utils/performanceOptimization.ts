@@ -299,7 +299,12 @@ export const cacheApiResponse = <T>(
  */
 export const clearExpiredCache = (): void => {
   const now = Date.now();
+<<<<<<< HEAD
   Array.from(cacheStore.entries()).forEach(([key, value]) => {
+=======
+  const entries = Array.from(cacheStore.entries());
+  for (const [key, value] of entries) {
+>>>>>>> fc749d6 (Implement modern fluid UI design system with soft aesthetics and smooth animations)
     if (value.expiry <= now) {
       cacheStore.delete(key);
     }

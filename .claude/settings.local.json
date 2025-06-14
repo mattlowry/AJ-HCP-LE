@@ -47,7 +47,12 @@
       "Bash(pip3 list:*)",
       "Bash(pip3 install:*)",
       "Bash(touch:*)",
-      "Bash(TESTING=true python3 manage.py test fsm_core.cache_tests -v 2)"
+      "Bash(TESTING=true python3 manage.py test fsm_core.cache_tests -v 2)",
+      "Bash(git rebase:*)",
+      "Bash(export:*)",
+      "Bash(/usr/bin/git --version)",
+      "Bash(npm update:*)",
+      "Bash(/usr/bin/git status)"
     ],
     "deny": []
   },
