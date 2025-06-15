@@ -43,7 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { jobApi, customerApi } from '../services/api';
-import { Customer, CustomerListItem } from '../types/customer';
+import { CustomerListItem } from '../types/customer';
 import { LineItem, JobPricing } from '../types/lineItem';
 import { v4 as uuidv4 } from 'uuid';
 

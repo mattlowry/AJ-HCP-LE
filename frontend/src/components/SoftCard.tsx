@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardProps, Box } from '@mui/material';
+import { Card, CardProps } from '@mui/material';
 
 interface SoftCardProps extends Omit<CardProps, 'variant'> {
   variant?: 'default' | 'elevated' | 'glass' | 'gradient';

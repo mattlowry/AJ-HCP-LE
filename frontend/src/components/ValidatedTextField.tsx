@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextField, TextFieldProps, InputAdornment } from '@mui/material';
-import { validateField, ValidationRule, formatPhoneNumber, formatCurrency } from '../utils/validation';
+import { validateField, ValidationRule, formatPhoneNumber } from '../utils/validation';
 
 interface ValidatedTextFieldProps extends Omit<TextFieldProps, 'error'> {
   validationRules?: ValidationRule | ValidationRule[];

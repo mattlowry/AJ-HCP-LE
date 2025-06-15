@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { jobApi, customerApi } from '../services/api';
 import { Job, JobListItem } from '../types/job';
 import { CustomerListItem } from '../types/customer';
-import { validateForm, commonValidationRules, formatCurrency } from '../utils/validation';
+import { validateForm, commonValidationRules } from '../utils/validation';
 import {
   Box,
   Typography,
@@ -45,12 +45,6 @@ import {
 
 // Using Job interface from types/job.ts
 
-interface Customer {
-  id: number;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-}
 
 interface ServiceType {
   id: number;
