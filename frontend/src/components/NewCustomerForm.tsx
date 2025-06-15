@@ -471,10 +471,9 @@ const NewCustomerForm: React.FC = () => {
                       label="State"
                       onChange={(e) => handleInputChange('state', e.target.value)}
                     >
-                      <MenuItem value="NY">NY</MenuItem>
-                      <MenuItem value="NJ">NJ</MenuItem>
-                      <MenuItem value="CT">CT</MenuItem>
-                      <MenuItem value="PA">PA</MenuItem>
+                      <MenuItem value="MD">Maryland</MenuItem>
+                      <MenuItem value="DC">Washington DC</MenuItem>
+                      <MenuItem value="VA">Virginia</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>

@@ -463,7 +463,7 @@ function App() {
                     element={
                       <RouteWrapper 
                         pageName="New Customer"
-                        roles={['admin', 'manager']}
+                        roles={['admin', 'manager', 'technician']}
                       >
                         <NewCustomerForm />
                       </RouteWrapper>

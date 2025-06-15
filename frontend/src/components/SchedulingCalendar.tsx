@@ -565,8 +565,9 @@ const SchedulingCalendar: React.FC = () => {
   }, [weekStart]);
   
   const fetchJobsCallback = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
     
     // Commented out unused date variables for build optimization
     // let dateFrom, dateTo;
@@ -822,8 +823,12 @@ const SchedulingCalendar: React.FC = () => {
           
       setUnscheduledJobs(demoUnscheduledJobs);
     }
-    
-    setLoading(false);
+    } catch (error) {
+      console.error('Error in fetchJobsCallback:', error);
+      setError('Failed to load scheduling data');
+    } finally {
+      setLoading(false);
+    }
   }, []); // Removed unnecessary dependencies
 
   useEffect(() => {
@@ -1886,6 +1891,25 @@ AJ Long Electric Team`;
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress size={40} sx={{ mb: 2 }} />
         <Typography variant="h6" color="textSecondary">Loading scheduling data...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => {
+            setError(null);
+            fetchJobsCallback();
+          }}
+        >
+          Try Again
+        </Button>
       </Box>
     );
   }
