@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: aj-long-electric-backend
+    runtime: python3
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/manage.py migrate && python backend/manage.py collectstatic --noinput && gunicorn --pythonpath backend fsm_core.wsgi:application
+    plan: free
+    healthCheckPath: /admin/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DJANGO_SETTINGS_MODULE
+        value: fsm_core.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "aj-long-electric.onrender.com,localhost,127.0.0.1"
+      - key: SESSION_SECRET
+        generateValue: true
