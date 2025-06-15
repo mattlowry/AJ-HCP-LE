@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { errorLogger, withErrorHandling, ErrorType } from '../utils/errorHandling';
+import { errorLogger } from '../utils/errorHandling';
+// Removed unused imports: withErrorHandling, ErrorType
 import { Customer, CustomerListItem, Property, CustomerContact, CustomerReview } from '../types/customer';
 import { Job, JobListItem } from '../types/job';
 import { Invoice, Estimate, Payment } from '../types/billing';
@@ -59,7 +60,7 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     // Handle different types of errors
-    const errorDetails = errorLogger.handleError(error, {
+    errorLogger.handleError(error, {
       component: 'APIService',
       action: `${error.config?.method?.toUpperCase()} ${error.config?.url}`,
       userMessage: getErrorMessage(error)
@@ -111,13 +112,13 @@ const getErrorMessage = (error: AxiosError): string => {
   }
 };
 
-// Enhanced API wrapper with error handling
-const createApiMethod = <T>(apiCall: () => Promise<AxiosResponse<T>>, context: string) => {
-  return withErrorHandling(apiCall, {
-    component: 'APIService',
-    action: context
-  });
-};
+// Commented out unused API wrapper for build optimization
+// const createApiMethod = <T>(apiCall: () => Promise<AxiosResponse<T>>, context: string) => {
+//   return withErrorHandling(apiCall, {
+//     component: 'APIService',
+//     action: context
+//   });
+// };
 
 // Customer API
 export const customerApi = {

@@ -68,11 +68,11 @@ export const validateForm = (data: Record<string, any>, rules: Record<string, Va
 // Common validation patterns
 export const validationPatterns = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^[\+]?[1-9][\d]{0,15}$/,
-  phoneUS: /^(\+1)?[\s\-]?\(?([0-9]{3})\)?[\s\-]?([0-9]{3})[\s\-]?([0-9]{4})$/,
+  phone: /^[+]?[1-9][\d]{0,15}$/,
+  phoneUS: /^(\+1)?[\s-]?\(?([0-9]{3})\)?[\s-]?([0-9]{3})[\s-]?([0-9]{4})$/,
   postalCode: /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/,
   zipCode: /^\d{5}(-\d{4})?$/,
-  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/,
   alphanumeric: /^[a-zA-Z0-9]+$/,
   currency: /^\d+(\.\d{1,2})?$/,
   jobNumber: /^JOB-\d{4}-\d{4}$/,

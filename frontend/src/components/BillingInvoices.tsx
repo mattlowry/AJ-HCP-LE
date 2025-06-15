@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { billingApi } from '../services/api';
-import { validateForm, commonValidationRules, validationPatterns, formatCurrency } from '../utils/validation';
-import { Invoice, Estimate, Payment } from '../types/billing';
+// Unused API imports removed for build optimization
+// import { billingApi } from '../services/api';
+// import { validateForm, commonValidationRules, validationPatterns, formatCurrency } from '../utils/validation';
+// import { Invoice, Estimate, Payment } from '../types/billing';
 import {
   Box,
   Typography,

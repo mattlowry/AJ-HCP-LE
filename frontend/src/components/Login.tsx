@@ -23,7 +23,8 @@ import {
   Business as BusinessIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { validateForm, commonValidationRules } from '../utils/validation';
+import { validateForm } from '../utils/validation';
+// Removed unused import: commonValidationRules
 
 const Login: React.FC = () => {
   const navigate = useNavigate();

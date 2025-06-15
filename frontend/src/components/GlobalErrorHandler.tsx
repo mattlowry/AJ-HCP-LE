@@ -11,14 +11,15 @@ import {
 import { errorLogger, ErrorDetails, ErrorSeverity } from '../utils/errorHandling';
 
 const GlobalErrorHandler: React.FC = () => {
-  const [errors, setErrors] = useState<ErrorDetails[]>([]);
+  // Commented out unused errors state for build optimization
+  // const [errors, setErrors] = useState<ErrorDetails[]>([]);
   const [currentError, setCurrentError] = useState<ErrorDetails | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     // Subscribe to error events
     const unsubscribe = errorLogger.onError((error) => {
-      setErrors(prev => [error, ...prev.slice(0, 4)]); // Keep last 5 errors
+      // setErrors(prev => [error, ...prev.slice(0, 4)]); // Keep last 5 errors - commented out for build optimization
       
       // Auto-show high priority errors
       if (error.severity === ErrorSeverity.HIGH || error.severity === ErrorSeverity.CRITICAL) {
