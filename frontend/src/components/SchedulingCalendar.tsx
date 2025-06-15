@@ -4,6 +4,7 @@ import { validateForm, commonValidationRules } from '../utils/validation';
 import { Item } from '../types/inventory';
 // Removed unused import: Category
 import { CustomerListItem } from '../types/customer';
+import { JobListItem } from '../types/job';
 import {
   Card,
   CardContent,
@@ -94,6 +95,28 @@ interface Job {
   estimated_cost?: number;
   payment_status?: 'paid' | 'due' | 'pending';
 }
+
+// Helper function to convert API JobListItem to local Job interface
+const convertJobListItemToJob = (apiJob: JobListItem): Job => {
+  return {
+    id: apiJob.id.toString(),
+    job_number: apiJob.job_number,
+    title: apiJob.title,
+    customer_name: apiJob.customer_name,
+    status: apiJob.status as Job['status'],
+    priority: apiJob.priority as Job['priority'],
+    scheduled_date: apiJob.scheduled_start ? apiJob.scheduled_start.split('T')[0] : null,
+    scheduled_start_time: apiJob.scheduled_start ? apiJob.scheduled_start.split('T')[1]?.split(':').slice(0, 2).join(':') : null,
+    scheduled_end_time: null, // Calculate from start + duration if needed
+    assigned_technician: apiJob.assigned_technicians?.[0] || null,
+    assigned_technicians: apiJob.assigned_technicians,
+    estimated_duration: apiJob.estimated_duration || 2,
+    service_type_name: apiJob.service_type || 'General Service',
+    job_type: 'job',
+    estimated_cost: apiJob.estimated_cost,
+    payment_status: undefined
+  };
+};
 
 interface Technician {
   id: string;
@@ -463,12 +486,12 @@ const SchedulingCalendar: React.FC = () => {
 
   const fetchTechnicians = async () => {
     try {
-      setError(null);
+      console.log('👷 Fetching available technicians...');
       const response = await technicianApi.getAvailable();
       setTechnicians(response.data);
+      console.log('✅ Successfully loaded technicians from API:', response.data.length);
     } catch (error) {
-      console.error('Error fetching technicians:', error);
-      setError('Failed to load technicians');
+      console.warn('⚠️ Technician API unavailable, using demo data:', error);
       
       // Fallback to demo data only if API completely fails
       const demoTechnicians = [
@@ -561,6 +584,7 @@ const SchedulingCalendar: React.FC = () => {
       dates.push(date.toISOString().split('T')[0]);
     }
     
+    console.log('📅 Week dates updated:', dates);
     setWeekDates(dates);
   }, [weekStart]);
   
@@ -569,31 +593,31 @@ const SchedulingCalendar: React.FC = () => {
       setLoading(true);
       setError(null);
     
-    // Commented out unused date variables for build optimization
-    // let dateFrom, dateTo;
-    // 
-    // if (viewMode === 'week' && weekDates.length > 0) {
-    //   dateFrom = weekDates[0];
-    //   dateTo = weekDates[6];
-    // } else {
-    //   dateFrom = selectedDate;
-    //   dateTo = selectedDate;
-    // }
+    let dateFrom, dateTo;
     
-    // Fetch scheduled jobs
+    if (viewMode === 'week' && weekDates.length > 0) {
+      dateFrom = weekDates[0];
+      dateTo = weekDates[6];
+    } else {
+      dateFrom = selectedDate;
+      dateTo = selectedDate;
+    }
+    
+    console.log('📅 Fetching jobs for date range:', { dateFrom, dateTo, viewMode });
+    
+    // Fetch scheduled jobs - try API first, fallback to demo data
     try {
-      // TODO: Re-enable API calls when interface is fixed
-      // const scheduledResponse = await jobApi.getAll({
-      //   date_from: dateFrom,
-      //   date_to: dateTo,
-      //   status: 'scheduled'
-      // });
-      // setJobs(scheduledResponse.data.results);
-      
-      // Use demo data instead
-      throw new Error('Using demo data');
+      const scheduledResponse = await jobApi.getAll({
+        date_from: dateFrom,
+        date_to: dateTo,
+        status: 'scheduled'
+      });
+      const convertedJobs = scheduledResponse.data.results.map(convertJobListItemToJob);
+      setJobs(convertedJobs);
+      console.log('✅ Successfully loaded jobs from API:', convertedJobs.length);
     } catch (scheduledError) {
-      console.error('Error fetching scheduled jobs:', scheduledError);
+      console.warn('⚠️ API unavailable, using demo data for scheduled jobs:', scheduledError);
+      setError('Using demo scheduling data - API temporarily unavailable');
           // Demo data for testing when API is not available
           const today = new Date();
           const generateDate = (dayOffset: number) => {
@@ -739,16 +763,14 @@ const SchedulingCalendar: React.FC = () => {
     
     // Fetch unscheduled jobs
     try {
-      // TODO: Re-enable API calls when interface is fixed
-      // const unscheduledResponse = await jobApi.getAll({
-      //   status: 'pending'
-      // });
-      // setUnscheduledJobs(unscheduledResponse.data.results);
-      
-      // Use demo data instead
-      throw new Error('Using demo data');
+      const unscheduledResponse = await jobApi.getAll({
+        status: 'pending'
+      });
+      const convertedUnscheduledJobs = unscheduledResponse.data.results.map(convertJobListItemToJob);
+      setUnscheduledJobs(convertedUnscheduledJobs);
+      console.log('✅ Successfully loaded unscheduled jobs from API:', convertedUnscheduledJobs.length);
     } catch (unscheduledError) {
-      console.error('Error fetching unscheduled jobs:', unscheduledError);
+      console.warn('⚠️ API unavailable, using demo data for unscheduled jobs:', unscheduledError);
       
       // Demo unscheduled jobs as fallback
       const demoUnscheduledJobs = [
@@ -829,9 +851,10 @@ const SchedulingCalendar: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []); // Removed unnecessary dependencies
+  }, [selectedDate, viewMode, weekDates]); // Include proper dependencies for re-fetching
 
   useEffect(() => {
+    console.log('🔄 SchedulingCalendar: Initial data fetch triggered');
     fetchJobsCallback();
     fetchTechnicians();
     fetchInventoryItems();
@@ -1888,34 +1911,126 @@ AJ Long Electric Team`;
 
   if (loading) {
     return (
-      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={40} sx={{ mb: 2 }} />
-        <Typography variant="h6" color="textSecondary">Loading scheduling data...</Typography>
+      <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc', p: 3 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" fontWeight="600" color="text.primary" gutterBottom>
+            Schedule Manager
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Loading scheduling data...
+          </Typography>
+        </Box>
+        
+        {/* Loading Skeleton */}
+        <Grid container spacing={3}>
+          {/* Header skeleton */}
+          <Grid item xs={12}>
+            <Card sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  {[1, 2, 3].map(i => (
+                    <Box key={i} sx={{ width: 80, height: 32, bgcolor: 'grey.200', borderRadius: 1 }} />
+                  ))}
+                </Box>
+                <Box sx={{ width: 200, height: 32, bgcolor: 'grey.200', borderRadius: 1 }} />
+              </Box>
+            </Card>
+          </Grid>
+          
+          {/* Calendar skeleton */}
+          <Grid item xs={8}>
+            <Card sx={{ p: 3 }}>
+              <Grid container spacing={1}>
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <Grid item xs={12/7} key={i}>
+                    <Box sx={{ height: 80, bgcolor: 'grey.100', borderRadius: 1, mb: 1 }} />
+                  </Grid>
+                ))}
+              </Grid>
+            </Card>
+          </Grid>
+          
+          {/* Sidebar skeleton */}
+          <Grid item xs={4}>
+            <Card sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>Unscheduled Jobs</Typography>
+              {[1, 2, 3, 4].map(i => (
+                <Box key={i} sx={{ height: 60, bgcolor: 'grey.100', borderRadius: 1, mb: 2 }} />
+              ))}
+            </Card>
+          </Grid>
+        </Grid>
+        
+        <Box display="flex" justifyContent="center" alignItems="center" mt={4}>
+          <CircularProgress size={40} sx={{ mr: 2 }} />
+          <Typography variant="body1" color="textSecondary">
+            Loading jobs, technicians, and scheduling data...
+          </Typography>
+        </Box>
       </Box>
     );
   }
 
-  if (error) {
+  if (error && !error.includes('demo')) {
     return (
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
-        <Typography variant="h6" color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={() => {
-            setError(null);
-            fetchJobsCallback();
-          }}
-        >
-          Try Again
-        </Button>
+        <Alert severity="error" sx={{ mb: 3, maxWidth: 600 }}>
+          <Typography variant="h6" gutterBottom>
+            Schedule Loading Error
+          </Typography>
+          <Typography variant="body2">
+            {error}
+          </Typography>
+        </Alert>
+        <Stack direction="row" spacing={2}>
+          <Button 
+            variant="contained" 
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              setError(null);
+              fetchJobsCallback();
+            }}
+          >
+            Retry Loading
+          </Button>
+          <Button 
+            variant="outlined"
+            onClick={() => {
+              setError('Using demo scheduling data - API temporarily unavailable');
+            }}
+          >
+            Continue with Demo Data
+          </Button>
+        </Stack>
       </Box>
     );
   }
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f8fafc', p: 3 }}>
+      {/* Demo Data Warning */}
+      {error && error.includes('demo') && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                setError(null);
+                fetchJobsCallback();
+              }}
+            >
+              Retry API
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+      
       {/* Modern Header with Stats */}
       <Box sx={{ mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -2033,11 +2148,17 @@ AJ Long Electric Team`;
                 size="small" 
                 onClick={() => {
                   setRefreshing(true);
+                  setError(null);
                   fetchJobsCallback().finally(() => setRefreshing(false));
                 }}
-                disabled={refreshing}
+                disabled={refreshing || loading}
+                title="Refresh schedule data"
               >
-                <RefreshIcon className={refreshing ? 'animate-spin' : ''} />
+                {refreshing ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <RefreshIcon />
+                )}
               </IconButton>
 
               <Button
@@ -2070,11 +2191,6 @@ AJ Long Electric Team`;
         </Card>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
 
       {/* Render Content Based on View Mode */}
       {viewMode === 'list' ? (
