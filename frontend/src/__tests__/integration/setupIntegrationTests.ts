@@ -1,6 +1,11 @@
 // Setup file for integration tests
 // This file configures the testing environment for integration tests
 
+import React from 'react';
+import { render } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { waitFor, screen } from '@testing-library/react';
+import { AuthProvider } from '../../contexts/AuthContext';
 import '@testing-library/jest-dom';
 
 // Mock console methods to reduce noise in test output
@@ -189,16 +194,14 @@ global.createMockApiError = (message, status = 500) => ({
 });
 
 // Custom render helper for integration tests
-export const renderWithProviders = (ui, options = {}) => {
+export const renderWithProviders = (ui: React.ReactElement, options: any = {}) => {
   const { initialState, ...renderOptions } = options;
   
-  const Wrapper = ({ children }) => {
-    return (
-      <BrowserRouter>
-        <AuthProvider initialState={initialState}>
-          {children}
-        </AuthProvider>
-      </BrowserRouter>
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    return React.createElement(
+      BrowserRouter,
+      null,
+      React.createElement(AuthProvider, null, children)
     );
   };
   
@@ -206,7 +209,7 @@ export const renderWithProviders = (ui, options = {}) => {
 };
 
 // Helper for testing form validation
-export const expectValidationError = async (container, fieldName, errorMessage) => {
+export const expectValidationError = async (container: HTMLElement, fieldName: string, errorMessage: string) => {
   await waitFor(() => {
     const errorElement = container.querySelector(`[data-testid="${fieldName}-error"]`) ||
                         container.querySelector(`[id="${fieldName}-helper-text"]`);
@@ -215,7 +218,7 @@ export const expectValidationError = async (container, fieldName, errorMessage) 
 };
 
 // Helper for testing loading states
-export const expectLoadingState = (container) => {
+export const expectLoadingState = (container: HTMLElement) => {
   expect(
     container.querySelector('[data-testid="loading"]') ||
     container.querySelector('.MuiCircularProgress-root') ||
@@ -224,7 +227,7 @@ export const expectLoadingState = (container) => {
 };
 
 // Helper for testing error states
-export const expectErrorState = (container, errorMessage) => {
+export const expectErrorState = (container: HTMLElement, errorMessage: string) => {
   expect(
     container.querySelector('[data-testid="error"]') ||
     screen.getByText(new RegExp(errorMessage, 'i'))

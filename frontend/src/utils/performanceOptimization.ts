@@ -304,7 +304,7 @@ export const clearExpiredCache = (): void => {
     if (value.expiry <= now) {
       cacheStore.delete(key);
     }
-  });
+  }
 };
 
 /**

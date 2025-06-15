@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { jobApi, technicianApi, customerApi, inventoryApi } from '../services/api';
 import { validateForm, commonValidationRules } from '../utils/validation';
 import { Item, Category } from '../types/inventory';
+import { CustomerListItem } from '../types/customer';
 import {
   Card,
   CardContent,
@@ -216,7 +217,7 @@ const SchedulingCalendar: React.FC = () => {
   
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
-  const [availableCustomers, setAvailableCustomers] = useState<any[]>([]);
+  const [availableCustomers, setAvailableCustomers] = useState<CustomerListItem[]>([]);
   const [selectedCustomerProperties, setSelectedCustomerProperties] = useState<any[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [newCustomerData, setNewCustomerData] = useState({
@@ -1159,9 +1160,9 @@ const SchedulingCalendar: React.FC = () => {
       console.error('Error fetching customers:', error);
       // Fallback demo customers
       setAvailableCustomers([
-        { id: 1, full_name: 'John Smith', email: 'john@example.com', phone: '+12025551234' },
-        { id: 2, full_name: 'Sarah Davis', email: 'sarah@example.com', phone: '+12025551235' },
-        { id: 3, full_name: 'Mike Johnson', email: 'mike@example.com', phone: '+12025551236' },
+        { id: 1, full_name: 'John Smith', email: 'john@example.com', phone: '+12025551234', customer_type: 'residential', full_address: '123 Main St, Arlington, VA 22201', property_count: 1, created_at: new Date().toISOString() },
+        { id: 2, full_name: 'Sarah Davis', email: 'sarah@example.com', phone: '+12025551235', customer_type: 'commercial', full_address: '456 Oak Ave, Arlington, VA 22202', property_count: 2, created_at: new Date().toISOString() },
+        { id: 3, full_name: 'Mike Johnson', email: 'mike@example.com', phone: '+12025551236', customer_type: 'residential', full_address: '789 Pine Dr, Arlington, VA 22203', property_count: 1, created_at: new Date().toISOString() },
       ]);
     }
   };
@@ -1223,8 +1224,20 @@ const SchedulingCalendar: React.FC = () => {
       const response = await customerApi.create(newCustomerData);
       const newCustomer = response.data;
       
+      // Transform Customer to CustomerListItem format
+      const customerListItem: CustomerListItem = {
+        id: newCustomer.id,
+        full_name: newCustomer.full_name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        customer_type: newCustomer.customer_type,
+        full_address: newCustomer.full_address,
+        property_count: newCustomer.properties?.length || 0,
+        created_at: newCustomer.created_at
+      };
+      
       // Add to available customers
-      setAvailableCustomers(prev => [newCustomer, ...prev]);
+      setAvailableCustomers(prev => [customerListItem, ...prev]);
       
       // Select the new customer
       handleCustomerSelect(newCustomer);
