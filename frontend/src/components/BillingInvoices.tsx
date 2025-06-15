@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { billingApi } from '../services/api';
 import { validateForm, commonValidationRules, validationPatterns, formatCurrency } from '../utils/validation';
 import { Invoice, Estimate, Payment } from '../types/billing';
@@ -191,7 +191,7 @@ const BillingInvoices: React.FC = () => {
     }
   ];
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -224,11 +224,12 @@ const BillingInvoices: React.FC = () => {
       setPayments(demoPayments);
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

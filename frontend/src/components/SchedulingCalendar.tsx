@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { jobApi, technicianApi, customerApi, inventoryApi } from '../services/api';
 import { validateForm, commonValidationRules } from '../utils/validation';
 import { Item, Category } from '../types/inventory';
@@ -106,6 +106,207 @@ interface TimeSlot {
   time: string;
   jobs: Job[];
 }
+
+// Fallback materials catalog (used when inventory API is unavailable)
+const FALLBACK_MATERIALS_CATALOG = [
+  // ===================
+  // CIRCUIT BREAKERS - SQUARE D / SCHNEIDER ELECTRIC
+  // ===================
+  { id: 'sqd-qo115', name: 'Square D QO 15A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 14.98, unit: 'each' },
+  { id: 'sqd-qo120', name: 'Square D QO 20A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 16.47, unit: 'each' },
+  { id: 'sqd-qo130', name: 'Square D QO 30A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 22.98, unit: 'each' },
+  { id: 'sqd-qo240', name: 'Square D QO 40A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 45.97, unit: 'each' },
+  { id: 'sqd-qo250', name: 'Square D QO 50A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 58.76, unit: 'each' },
+  { id: 'sqd-qo2100', name: 'Square D QO 100A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
+  { id: 'sqd-qo120gfi', name: 'Square D QO 20A GFCI Breaker', category: 'Circuit Breakers - Square D', price: 89.97, unit: 'each' },
+  { id: 'sqd-qo115af', name: 'Square D QO 15A AFCI Breaker', category: 'Circuit Breakers - Square D', price: 75.98, unit: 'each' },
+  { id: 'sqd-qo120df', name: 'Square D QO 20A Dual Function AFCI/GFCI', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
+  
+  // ===================
+  // CIRCUIT BREAKERS - SIEMENS
+  // ===================
+  { id: 'sie-q115', name: 'Siemens Q115 15A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 12.48, unit: 'each' },
+  { id: 'sie-q120', name: 'Siemens Q120 20A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 13.97, unit: 'each' },
+  { id: 'sie-q130', name: 'Siemens Q130 30A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 19.98, unit: 'each' },
+  { id: 'sie-q240', name: 'Siemens Q240 40A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 39.97, unit: 'each' },
+  { id: 'sie-q250', name: 'Siemens Q250 50A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 52.76, unit: 'each' },
+  { id: 'sie-q120gfci', name: 'Siemens Q120GFCI 20A GFCI Breaker', category: 'Circuit Breakers - Siemens', price: 79.97, unit: 'each' },
+  { id: 'sie-q115af', name: 'Siemens Q115AF 15A AFCI Breaker', category: 'Circuit Breakers - Siemens', price: 69.98, unit: 'each' },
+
+  // ===================
+  // CIRCUIT BREAKERS - GENERAL ELECTRIC (GE)
+  // ===================
+  { id: 'ge-thql115', name: 'GE THQL115 15A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 11.98, unit: 'each' },
+  { id: 'ge-thql120', name: 'GE THQL120 20A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 13.47, unit: 'each' },
+  { id: 'ge-thql130', name: 'GE THQL130 30A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 18.98, unit: 'each' },
+  { id: 'ge-thql240', name: 'GE THQL240 40A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 37.97, unit: 'each' },
+  { id: 'ge-thql250', name: 'GE THQL250 50A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 49.76, unit: 'each' },
+  { id: 'ge-thql1120gf', name: 'GE THQL1120GF 20A GFCI Breaker', category: 'Circuit Breakers - GE', price: 77.97, unit: 'each' },
+
+  // ===================
+  // CIRCUIT BREAKERS - EATON
+  // ===================
+  { id: 'eat-br115', name: 'Eaton BR115 15A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 10.98, unit: 'each' },
+  { id: 'eat-br120', name: 'Eaton BR120 20A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 12.47, unit: 'each' },
+  { id: 'eat-br130', name: 'Eaton BR130 30A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 17.98, unit: 'each' },
+  { id: 'eat-br240', name: 'Eaton BR240 40A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 35.97, unit: 'each' },
+  { id: 'eat-br250', name: 'Eaton BR250 50A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 47.76, unit: 'each' },
+  { id: 'eat-brgf120', name: 'Eaton BRGF120 20A GFCI Breaker', category: 'Circuit Breakers - Eaton', price: 75.97, unit: 'each' },
+
+  // ===================
+  // WIRE & CABLE - ROMEX
+  // ===================
+  { id: 'romex-14-2-wg', name: '14-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 0.89, unit: 'foot' },
+  { id: 'romex-14-3-wg', name: '14-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.29, unit: 'foot' },
+  { id: 'romex-12-2-wg', name: '12-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.39, unit: 'foot' },
+  { id: 'romex-12-3-wg', name: '12-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.89, unit: 'foot' },
+  { id: 'romex-10-2-wg', name: '10-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 2.49, unit: 'foot' },
+  { id: 'romex-10-3-wg', name: '10-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.29, unit: 'foot' },
+  { id: 'romex-8-2-wg', name: '8-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.89, unit: 'foot' },
+  { id: 'romex-8-3-wg', name: '8-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 4.89, unit: 'foot' },
+  { id: 'romex-6-2-wg', name: '6-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 5.89, unit: 'foot' },
+  { id: 'romex-6-3-wg', name: '6-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 7.29, unit: 'foot' },
+
+  // ===================
+  // WIRE & CABLE - THHN/THWN
+  // ===================
+  { id: 'thhn-14-black', name: '14 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+  { id: 'thhn-14-white', name: '14 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+  { id: 'thhn-14-red', name: '14 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
+  { id: 'thhn-12-black', name: '12 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+  { id: 'thhn-12-white', name: '12 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+  { id: 'thhn-12-red', name: '12 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
+  { id: 'thhn-10-black', name: '10 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
+  { id: 'thhn-10-white', name: '10 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
+  { id: 'thhn-8-black', name: '8 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 1.45, unit: 'foot' },
+  { id: 'thhn-6-black', name: '6 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 2.15, unit: 'foot' },
+
+  // ===================
+  // OUTLETS & RECEPTACLES
+  // ===================
+  { id: 'rec-15a-std', name: '15A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 1.48, unit: 'each' },
+  { id: 'rec-20a-std', name: '20A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 2.98, unit: 'each' },
+  { id: 'rec-15a-gfci', name: '15A GFCI Receptacle', category: 'Outlets & Receptacles', price: 18.97, unit: 'each' },
+  { id: 'rec-20a-gfci', name: '20A GFCI Receptacle', category: 'Outlets & Receptacles', price: 22.97, unit: 'each' },
+  { id: 'rec-15a-usb', name: '15A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 24.98, unit: 'each' },
+  { id: 'rec-15a-usbc', name: '15A USB-C Duplex Receptacle', category: 'Outlets & Receptacles', price: 34.98, unit: 'each' },
+  { id: 'rec-20a-usb', name: '20A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 29.98, unit: 'each' },
+  { id: 'rec-gfci-usb', name: '20A GFCI with USB Charging', category: 'Outlets & Receptacles', price: 39.97, unit: 'each' },
+  { id: 'rec-smartwifi', name: 'Smart WiFi GFCI Receptacle', category: 'Outlets & Receptacles', price: 49.98, unit: 'each' },
+  { id: 'rec-weatherproof', name: 'Weatherproof GFCI Receptacle', category: 'Outlets & Receptacles', price: 26.98, unit: 'each' },
+
+  // ===================
+  // SWITCHES
+  // ===================
+  { id: 'sw-single-toggle', name: 'Single Pole Toggle Switch', category: 'Switches', price: 1.98, unit: 'each' },
+  { id: 'sw-single-decora', name: 'Single Pole Decora Switch', category: 'Switches', price: 3.48, unit: 'each' },
+  { id: 'sw-3way-toggle', name: '3-Way Toggle Switch', category: 'Switches', price: 3.98, unit: 'each' },
+  { id: 'sw-3way-decora', name: '3-Way Decora Switch', category: 'Switches', price: 5.48, unit: 'each' },
+  { id: 'sw-4way-toggle', name: '4-Way Toggle Switch', category: 'Switches', price: 12.98, unit: 'each' },
+  { id: 'sw-dimmer-led', name: 'LED Dimmer Switch', category: 'Switches', price: 24.98, unit: 'each' },
+  { id: 'sw-dimmer-3way', name: '3-Way LED Dimmer Switch', category: 'Switches', price: 34.98, unit: 'each' },
+  { id: 'sw-smart-wifi', name: 'Smart WiFi Switch', category: 'Switches', price: 19.98, unit: 'each' },
+  { id: 'sw-smart-dimmer', name: 'Smart WiFi Dimmer Switch', category: 'Switches', price: 39.98, unit: 'each' },
+  { id: 'sw-motion-sensor', name: 'Motion Sensor Switch', category: 'Switches', price: 29.98, unit: 'each' },
+  { id: 'sw-timer', name: 'Programmable Timer Switch', category: 'Switches', price: 22.98, unit: 'each' },
+
+  // ===================
+  // ELECTRICAL BOXES
+  // ===================
+  { id: 'box-1gang-pvc', name: 'Single Gang PVC Old Work Box', category: 'Electrical Boxes', price: 1.48, unit: 'each' },
+  { id: 'box-2gang-pvc', name: 'Double Gang PVC Old Work Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
+  { id: 'box-3gang-pvc', name: 'Triple Gang PVC Old Work Box', category: 'Electrical Boxes', price: 4.98, unit: 'each' },
+  { id: 'box-1gang-metal', name: 'Single Gang Metal Box', category: 'Electrical Boxes', price: 2.48, unit: 'each' },
+  { id: 'box-2gang-metal', name: 'Double Gang Metal Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
+  { id: 'box-ceiling-pvc', name: 'Ceiling Fan PVC Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
+  { id: 'box-ceiling-metal', name: 'Ceiling Fan Metal Box', category: 'Electrical Boxes', price: 5.98, unit: 'each' },
+  { id: 'box-4x4-sq', name: '4" x 4" Square Junction Box', category: 'Electrical Boxes', price: 3.48, unit: 'each' },
+  { id: 'box-4x4-oct', name: '4" Octagon Ceiling Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
+  { id: 'box-weatherproof', name: 'Weatherproof Outdoor Box', category: 'Electrical Boxes', price: 8.98, unit: 'each' },
+
+  // ===================
+  // CONDUIT & FITTINGS
+  // ===================
+  { id: 'conduit-emt-12', name: '1/2" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
+  { id: 'conduit-emt-34', name: '3/4" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
+  { id: 'conduit-emt-1', name: '1" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 6.98, unit: 'foot' },
+  { id: 'conduit-pvc-12', name: '1/2" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 2.48, unit: 'foot' },
+  { id: 'conduit-pvc-34', name: '3/4" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
+  { id: 'conduit-pvc-1', name: '1" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
+  { id: 'fitting-emt-conn-12', name: '1/2" EMT Connector', category: 'Conduit & Fittings', price: 1.98, unit: 'each' },
+  { id: 'fitting-emt-conn-34', name: '3/4" EMT Connector', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
+  { id: 'fitting-emt-coup-12', name: '1/2" EMT Coupling', category: 'Conduit & Fittings', price: 1.48, unit: 'each' },
+  { id: 'fitting-90-12', name: '1/2" 90° EMT Elbow', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
+
+  // ===================
+  // ELECTRICAL PANELS
+  // ===================
+  { id: 'panel-sqd-qo120', name: 'Square D QO 20-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 189.00, unit: 'each' },
+  { id: 'panel-sqd-qo140', name: 'Square D QO 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 298.00, unit: 'each' },
+  { id: 'panel-sqd-qo200', name: 'Square D QO 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 445.00, unit: 'each' },
+  { id: 'panel-sie-s2040', name: 'Siemens 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 185.00, unit: 'each' },
+  { id: 'panel-sie-200a', name: 'Siemens 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 425.00, unit: 'each' },
+  { id: 'panel-ge-load', name: 'GE PowerMark 40-Circuit Load Center', category: 'Electrical Panels', price: 175.00, unit: 'each' },
+  { id: 'subpanel-100a', name: '100A Sub Panel Load Center', category: 'Electrical Panels', price: 125.00, unit: 'each' },
+
+  // ===================
+  // LIGHTING & FIXTURES
+  // ===================
+  { id: 'led-recessed-4', name: '4" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 12.98, unit: 'each' },
+  { id: 'led-recessed-6', name: '6" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 18.98, unit: 'each' },
+  { id: 'led-recessed-adj', name: '6" LED Adjustable Recessed Light', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
+  { id: 'fixture-flush-led', name: 'LED Flush Mount Ceiling Light', category: 'Lighting & Fixtures', price: 39.98, unit: 'each' },
+  { id: 'fixture-pendant', name: 'Mini Pendant Light Fixture', category: 'Lighting & Fixtures', price: 29.98, unit: 'each' },
+  { id: 'fixture-chandelier', name: 'Traditional Chandelier 5-Light', category: 'Lighting & Fixtures', price: 129.00, unit: 'each' },
+  { id: 'fixture-vanity', name: '3-Light Vanity Bar Fixture', category: 'Lighting & Fixtures', price: 59.98, unit: 'each' },
+  { id: 'fixture-outdoor', name: 'Outdoor Wall Lantern', category: 'Lighting & Fixtures', price: 34.98, unit: 'each' },
+  { id: 'under-cabinet-led', name: 'Under Cabinet LED Light Strip', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
+
+  // ===================
+  // SPECIALTY & SAFETY
+  // ===================
+  { id: 'smoke-detector-battery', name: 'Battery Smoke Detector', category: 'Specialty & Safety', price: 14.98, unit: 'each' },
+  { id: 'smoke-detector-hardwired', name: 'Hardwired Smoke Detector', category: 'Specialty & Safety', price: 22.98, unit: 'each' },
+  { id: 'co-detector', name: 'Carbon Monoxide Detector', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
+  { id: 'smoke-co-combo', name: 'Smoke & CO Combo Detector', category: 'Specialty & Safety', price: 39.98, unit: 'each' },
+  { id: 'surge-whole-house', name: 'Whole House Surge Protector', category: 'Specialty & Safety', price: 189.00, unit: 'each' },
+  { id: 'surge-strip', name: '8-Outlet Surge Protector Strip', category: 'Specialty & Safety', price: 24.98, unit: 'each' },
+  { id: 'doorbell-wired', name: 'Wired Doorbell Kit', category: 'Specialty & Safety', price: 19.98, unit: 'each' },
+  { id: 'doorbell-smart', name: 'Smart Video Doorbell', category: 'Specialty & Safety', price: 99.99, unit: 'each' },
+  { id: 'exhaust-fan-bath', name: 'Bathroom Exhaust Fan 80 CFM', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
+  { id: 'exhaust-fan-quiet', name: 'Ultra-Quiet Bathroom Fan 110 CFM', category: 'Specialty & Safety', price: 79.98, unit: 'each' },
+
+  // ===================
+  // EV CHARGING & HIGH-AMP
+  // ===================
+  { id: 'ev-charger-l2-32a', name: '32A Level 2 EV Charger', category: 'EV Charging', price: 499.00, unit: 'each' },
+  { id: 'ev-charger-l2-40a', name: '40A Level 2 EV Charger', category: 'EV Charging', price: 649.00, unit: 'each' },
+  { id: 'ev-charger-smart', name: 'Smart WiFi EV Charger 32A', category: 'EV Charging', price: 699.00, unit: 'each' },
+  { id: 'nema-6-50', name: 'NEMA 6-50 50A 240V Receptacle', category: 'EV Charging', price: 24.98, unit: 'each' },
+  { id: 'nema-14-50', name: 'NEMA 14-50 50A 240V Receptacle', category: 'EV Charging', price: 29.98, unit: 'each' },
+  { id: 'dryer-cord-4wire', name: '4-Wire 30A Dryer Cord', category: 'EV Charging', price: 34.98, unit: 'each' },
+
+  // ===================
+  // WIRE NUTS & CONNECTORS
+  // ===================
+  { id: 'wirenut-yellow', name: 'Yellow Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 12.98, unit: 'pack' },
+  { id: 'wirenut-red', name: 'Red Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 14.98, unit: 'pack' },
+  { id: 'wirenut-blue', name: 'Blue Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 16.98, unit: 'pack' },
+  { id: 'wirenut-orange', name: 'Orange Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 9.98, unit: 'pack' },
+  { id: 'wago-221', name: 'WAGO 221 Lever Connectors (25 pack)', category: 'Wire Nuts & Connectors', price: 24.98, unit: 'pack' },
+  { id: 'wiremold-splice', name: 'In-Line Splice Kit', category: 'Wire Nuts & Connectors', price: 8.98, unit: 'each' },
+
+  // ===================
+  // COVERS & PLATES
+  // ===================
+  { id: 'plate-1gang-white', name: 'Single Gang Toggle Switch Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
+  { id: 'plate-1gang-almond', name: 'Single Gang Toggle Switch Plate - Almond', category: 'Covers & Plates', price: 1.28, unit: 'each' },
+  { id: 'plate-1gang-decora', name: 'Single Gang Decora Switch Plate - White', category: 'Covers & Plates', price: 1.48, unit: 'each' },
+  { id: 'plate-2gang-white', name: 'Double Gang Switch Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' },
+  { id: 'plate-outlet-white', name: 'Duplex Outlet Cover Plate - White', category: 'Covers & Plates', price: 0.78, unit: 'each' },
+  { id: 'plate-blank-white', name: 'Blank Cover Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
+  { id: 'plate-gfci-white', name: 'GFCI Outlet Cover Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' }
+];
 
 const SchedulingCalendar: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1319,7 +1520,7 @@ const SchedulingCalendar: React.FC = () => {
     calculateEstimateTotals(updatedItems);
   };
 
-  const calculateEstimateTotals = (items: typeof lineItems) => {
+  const calculateEstimateTotals = useCallback((items: typeof lineItems) => {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const taxAmount = (subtotal * newJobData.tax_rate) / 100;
     const total = subtotal + taxAmount;
@@ -1329,226 +1530,26 @@ const SchedulingCalendar: React.FC = () => {
       subtotal,
       total_cost: total
     }));
-  };
+  }, [newJobData.tax_rate]);
 
   // Update totals when tax rate changes
   React.useEffect(() => {
     calculateEstimateTotals(lineItems);
-  }, [newJobData.tax_rate]);
+  }, [calculateEstimateTotals, lineItems]);
 
-  // Fallback materials catalog (used when inventory API is unavailable)
-  const fallbackMaterialsCatalog = [
-    // ===================
-    // CIRCUIT BREAKERS - SQUARE D / SCHNEIDER ELECTRIC
-    // ===================
-    { id: 'sqd-qo115', name: 'Square D QO 15A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 14.98, unit: 'each' },
-    { id: 'sqd-qo120', name: 'Square D QO 20A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 16.47, unit: 'each' },
-    { id: 'sqd-qo130', name: 'Square D QO 30A Single Pole Breaker', category: 'Circuit Breakers - Square D', price: 22.98, unit: 'each' },
-    { id: 'sqd-qo240', name: 'Square D QO 40A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 45.97, unit: 'each' },
-    { id: 'sqd-qo250', name: 'Square D QO 50A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 58.76, unit: 'each' },
-    { id: 'sqd-qo2100', name: 'Square D QO 100A Double Pole Breaker', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
-    { id: 'sqd-qo120gfi', name: 'Square D QO 20A GFCI Breaker', category: 'Circuit Breakers - Square D', price: 89.97, unit: 'each' },
-    { id: 'sqd-qo115af', name: 'Square D QO 15A AFCI Breaker', category: 'Circuit Breakers - Square D', price: 75.98, unit: 'each' },
-    { id: 'sqd-qo120df', name: 'Square D QO 20A Dual Function AFCI/GFCI', category: 'Circuit Breakers - Square D', price: 125.99, unit: 'each' },
-    
-    // ===================
-    // CIRCUIT BREAKERS - SIEMENS
-    // ===================
-    { id: 'sie-q115', name: 'Siemens Q115 15A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 12.48, unit: 'each' },
-    { id: 'sie-q120', name: 'Siemens Q120 20A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 13.97, unit: 'each' },
-    { id: 'sie-q130', name: 'Siemens Q130 30A Single Pole Breaker', category: 'Circuit Breakers - Siemens', price: 19.98, unit: 'each' },
-    { id: 'sie-q240', name: 'Siemens Q240 40A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 39.97, unit: 'each' },
-    { id: 'sie-q250', name: 'Siemens Q250 50A Double Pole Breaker', category: 'Circuit Breakers - Siemens', price: 52.76, unit: 'each' },
-    { id: 'sie-q120gfci', name: 'Siemens Q120GFCI 20A GFCI Breaker', category: 'Circuit Breakers - Siemens', price: 79.97, unit: 'each' },
-    { id: 'sie-q115af', name: 'Siemens Q115AF 15A AFCI Breaker', category: 'Circuit Breakers - Siemens', price: 69.98, unit: 'each' },
-
-    // ===================
-    // CIRCUIT BREAKERS - GENERAL ELECTRIC (GE)
-    // ===================
-    { id: 'ge-thql115', name: 'GE THQL115 15A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 11.98, unit: 'each' },
-    { id: 'ge-thql120', name: 'GE THQL120 20A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 13.47, unit: 'each' },
-    { id: 'ge-thql130', name: 'GE THQL130 30A Single Pole Breaker', category: 'Circuit Breakers - GE', price: 18.98, unit: 'each' },
-    { id: 'ge-thql240', name: 'GE THQL240 40A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 37.97, unit: 'each' },
-    { id: 'ge-thql250', name: 'GE THQL250 50A Double Pole Breaker', category: 'Circuit Breakers - GE', price: 49.76, unit: 'each' },
-    { id: 'ge-thql1120gf', name: 'GE THQL1120GF 20A GFCI Breaker', category: 'Circuit Breakers - GE', price: 77.97, unit: 'each' },
-
-    // ===================
-    // CIRCUIT BREAKERS - EATON
-    // ===================
-    { id: 'eat-br115', name: 'Eaton BR115 15A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 10.98, unit: 'each' },
-    { id: 'eat-br120', name: 'Eaton BR120 20A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 12.47, unit: 'each' },
-    { id: 'eat-br130', name: 'Eaton BR130 30A Single Pole Breaker', category: 'Circuit Breakers - Eaton', price: 17.98, unit: 'each' },
-    { id: 'eat-br240', name: 'Eaton BR240 40A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 35.97, unit: 'each' },
-    { id: 'eat-br250', name: 'Eaton BR250 50A Double Pole Breaker', category: 'Circuit Breakers - Eaton', price: 47.76, unit: 'each' },
-    { id: 'eat-brgf120', name: 'Eaton BRGF120 20A GFCI Breaker', category: 'Circuit Breakers - Eaton', price: 75.97, unit: 'each' },
-
-    // ===================
-    // WIRE & CABLE - ROMEX
-    // ===================
-    { id: 'romex-14-2-wg', name: '14-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 0.89, unit: 'foot' },
-    { id: 'romex-14-3-wg', name: '14-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.29, unit: 'foot' },
-    { id: 'romex-12-2-wg', name: '12-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.39, unit: 'foot' },
-    { id: 'romex-12-3-wg', name: '12-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 1.89, unit: 'foot' },
-    { id: 'romex-10-2-wg', name: '10-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 2.49, unit: 'foot' },
-    { id: 'romex-10-3-wg', name: '10-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.29, unit: 'foot' },
-    { id: 'romex-8-2-wg', name: '8-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 3.89, unit: 'foot' },
-    { id: 'romex-8-3-wg', name: '8-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 4.89, unit: 'foot' },
-    { id: 'romex-6-2-wg', name: '6-2 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 5.89, unit: 'foot' },
-    { id: 'romex-6-3-wg', name: '6-3 Romex NM-B Cable w/Ground', category: 'Wire & Cable - Romex', price: 7.29, unit: 'foot' },
-
-    // ===================
-    // WIRE & CABLE - THHN/THWN
-    // ===================
-    { id: 'thhn-14-black', name: '14 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
-    { id: 'thhn-14-white', name: '14 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
-    { id: 'thhn-14-red', name: '14 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.45, unit: 'foot' },
-    { id: 'thhn-12-black', name: '12 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
-    { id: 'thhn-12-white', name: '12 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
-    { id: 'thhn-12-red', name: '12 AWG THHN/THWN Stranded Red', category: 'Wire & Cable - THHN', price: 0.65, unit: 'foot' },
-    { id: 'thhn-10-black', name: '10 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
-    { id: 'thhn-10-white', name: '10 AWG THHN/THWN Stranded White', category: 'Wire & Cable - THHN', price: 0.95, unit: 'foot' },
-    { id: 'thhn-8-black', name: '8 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 1.45, unit: 'foot' },
-    { id: 'thhn-6-black', name: '6 AWG THHN/THWN Stranded Black', category: 'Wire & Cable - THHN', price: 2.15, unit: 'foot' },
-
-    // ===================
-    // OUTLETS & RECEPTACLES
-    // ===================
-    { id: 'rec-15a-std', name: '15A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 1.48, unit: 'each' },
-    { id: 'rec-20a-std', name: '20A Standard Duplex Receptacle', category: 'Outlets & Receptacles', price: 2.98, unit: 'each' },
-    { id: 'rec-15a-gfci', name: '15A GFCI Receptacle', category: 'Outlets & Receptacles', price: 18.97, unit: 'each' },
-    { id: 'rec-20a-gfci', name: '20A GFCI Receptacle', category: 'Outlets & Receptacles', price: 22.97, unit: 'each' },
-    { id: 'rec-15a-usb', name: '15A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 24.98, unit: 'each' },
-    { id: 'rec-15a-usbc', name: '15A USB-C Duplex Receptacle', category: 'Outlets & Receptacles', price: 34.98, unit: 'each' },
-    { id: 'rec-20a-usb', name: '20A USB-A Duplex Receptacle', category: 'Outlets & Receptacles', price: 29.98, unit: 'each' },
-    { id: 'rec-gfci-usb', name: '20A GFCI with USB Charging', category: 'Outlets & Receptacles', price: 39.97, unit: 'each' },
-    { id: 'rec-smartwifi', name: 'Smart WiFi GFCI Receptacle', category: 'Outlets & Receptacles', price: 49.98, unit: 'each' },
-    { id: 'rec-weatherproof', name: 'Weatherproof GFCI Receptacle', category: 'Outlets & Receptacles', price: 26.98, unit: 'each' },
-
-    // ===================
-    // SWITCHES
-    // ===================
-    { id: 'sw-single-toggle', name: 'Single Pole Toggle Switch', category: 'Switches', price: 1.98, unit: 'each' },
-    { id: 'sw-single-decora', name: 'Single Pole Decora Switch', category: 'Switches', price: 3.48, unit: 'each' },
-    { id: 'sw-3way-toggle', name: '3-Way Toggle Switch', category: 'Switches', price: 3.98, unit: 'each' },
-    { id: 'sw-3way-decora', name: '3-Way Decora Switch', category: 'Switches', price: 5.48, unit: 'each' },
-    { id: 'sw-4way-toggle', name: '4-Way Toggle Switch', category: 'Switches', price: 12.98, unit: 'each' },
-    { id: 'sw-dimmer-led', name: 'LED Dimmer Switch', category: 'Switches', price: 24.98, unit: 'each' },
-    { id: 'sw-dimmer-3way', name: '3-Way LED Dimmer Switch', category: 'Switches', price: 34.98, unit: 'each' },
-    { id: 'sw-smart-wifi', name: 'Smart WiFi Switch', category: 'Switches', price: 19.98, unit: 'each' },
-    { id: 'sw-smart-dimmer', name: 'Smart WiFi Dimmer Switch', category: 'Switches', price: 39.98, unit: 'each' },
-    { id: 'sw-motion-sensor', name: 'Motion Sensor Switch', category: 'Switches', price: 29.98, unit: 'each' },
-    { id: 'sw-timer', name: 'Programmable Timer Switch', category: 'Switches', price: 22.98, unit: 'each' },
-
-    // ===================
-    // ELECTRICAL BOXES
-    // ===================
-    { id: 'box-1gang-pvc', name: 'Single Gang PVC Old Work Box', category: 'Electrical Boxes', price: 1.48, unit: 'each' },
-    { id: 'box-2gang-pvc', name: 'Double Gang PVC Old Work Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
-    { id: 'box-3gang-pvc', name: 'Triple Gang PVC Old Work Box', category: 'Electrical Boxes', price: 4.98, unit: 'each' },
-    { id: 'box-1gang-metal', name: 'Single Gang Metal Box', category: 'Electrical Boxes', price: 2.48, unit: 'each' },
-    { id: 'box-2gang-metal', name: 'Double Gang Metal Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
-    { id: 'box-ceiling-pvc', name: 'Ceiling Fan PVC Box', category: 'Electrical Boxes', price: 3.98, unit: 'each' },
-    { id: 'box-ceiling-metal', name: 'Ceiling Fan Metal Box', category: 'Electrical Boxes', price: 5.98, unit: 'each' },
-    { id: 'box-4x4-sq', name: '4" x 4" Square Junction Box', category: 'Electrical Boxes', price: 3.48, unit: 'each' },
-    { id: 'box-4x4-oct', name: '4" Octagon Ceiling Box', category: 'Electrical Boxes', price: 2.98, unit: 'each' },
-    { id: 'box-weatherproof', name: 'Weatherproof Outdoor Box', category: 'Electrical Boxes', price: 8.98, unit: 'each' },
-
-    // ===================
-    // CONDUIT & FITTINGS
-    // ===================
-    { id: 'conduit-emt-12', name: '1/2" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
-    { id: 'conduit-emt-34', name: '3/4" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
-    { id: 'conduit-emt-1', name: '1" EMT Electrical Conduit', category: 'Conduit & Fittings', price: 6.98, unit: 'foot' },
-    { id: 'conduit-pvc-12', name: '1/2" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 2.48, unit: 'foot' },
-    { id: 'conduit-pvc-34', name: '3/4" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 3.48, unit: 'foot' },
-    { id: 'conduit-pvc-1', name: '1" PVC Schedule 40 Conduit', category: 'Conduit & Fittings', price: 4.98, unit: 'foot' },
-    { id: 'fitting-emt-conn-12', name: '1/2" EMT Connector', category: 'Conduit & Fittings', price: 1.98, unit: 'each' },
-    { id: 'fitting-emt-conn-34', name: '3/4" EMT Connector', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
-    { id: 'fitting-emt-coup-12', name: '1/2" EMT Coupling', category: 'Conduit & Fittings', price: 1.48, unit: 'each' },
-    { id: 'fitting-90-12', name: '1/2" 90° EMT Elbow', category: 'Conduit & Fittings', price: 2.98, unit: 'each' },
-
-    // ===================
-    // ELECTRICAL PANELS
-    // ===================
-    { id: 'panel-sqd-qo120', name: 'Square D QO 20-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 189.00, unit: 'each' },
-    { id: 'panel-sqd-qo140', name: 'Square D QO 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 298.00, unit: 'each' },
-    { id: 'panel-sqd-qo200', name: 'Square D QO 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 445.00, unit: 'each' },
-    { id: 'panel-sie-s2040', name: 'Siemens 40-Circuit Load Center 120/240V', category: 'Electrical Panels', price: 185.00, unit: 'each' },
-    { id: 'panel-sie-200a', name: 'Siemens 200A 40-Circuit Main Breaker Panel', category: 'Electrical Panels', price: 425.00, unit: 'each' },
-    { id: 'panel-ge-load', name: 'GE PowerMark 40-Circuit Load Center', category: 'Electrical Panels', price: 175.00, unit: 'each' },
-    { id: 'subpanel-100a', name: '100A Sub Panel Load Center', category: 'Electrical Panels', price: 125.00, unit: 'each' },
-
-    // ===================
-    // LIGHTING & FIXTURES
-    // ===================
-    { id: 'led-recessed-4', name: '4" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 12.98, unit: 'each' },
-    { id: 'led-recessed-6', name: '6" LED Recessed Downlight', category: 'Lighting & Fixtures', price: 18.98, unit: 'each' },
-    { id: 'led-recessed-adj', name: '6" LED Adjustable Recessed Light', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
-    { id: 'fixture-flush-led', name: 'LED Flush Mount Ceiling Light', category: 'Lighting & Fixtures', price: 39.98, unit: 'each' },
-    { id: 'fixture-pendant', name: 'Mini Pendant Light Fixture', category: 'Lighting & Fixtures', price: 29.98, unit: 'each' },
-    { id: 'fixture-chandelier', name: 'Traditional Chandelier 5-Light', category: 'Lighting & Fixtures', price: 129.00, unit: 'each' },
-    { id: 'fixture-vanity', name: '3-Light Vanity Bar Fixture', category: 'Lighting & Fixtures', price: 59.98, unit: 'each' },
-    { id: 'fixture-outdoor', name: 'Outdoor Wall Lantern', category: 'Lighting & Fixtures', price: 34.98, unit: 'each' },
-    { id: 'under-cabinet-led', name: 'Under Cabinet LED Light Strip', category: 'Lighting & Fixtures', price: 24.98, unit: 'each' },
-
-    // ===================
-    // SPECIALTY & SAFETY
-    // ===================
-    { id: 'smoke-detector-battery', name: 'Battery Smoke Detector', category: 'Specialty & Safety', price: 14.98, unit: 'each' },
-    { id: 'smoke-detector-hardwired', name: 'Hardwired Smoke Detector', category: 'Specialty & Safety', price: 22.98, unit: 'each' },
-    { id: 'co-detector', name: 'Carbon Monoxide Detector', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
-    { id: 'smoke-co-combo', name: 'Smoke & CO Combo Detector', category: 'Specialty & Safety', price: 39.98, unit: 'each' },
-    { id: 'surge-whole-house', name: 'Whole House Surge Protector', category: 'Specialty & Safety', price: 189.00, unit: 'each' },
-    { id: 'surge-strip', name: '8-Outlet Surge Protector Strip', category: 'Specialty & Safety', price: 24.98, unit: 'each' },
-    { id: 'doorbell-wired', name: 'Wired Doorbell Kit', category: 'Specialty & Safety', price: 19.98, unit: 'each' },
-    { id: 'doorbell-smart', name: 'Smart Video Doorbell', category: 'Specialty & Safety', price: 99.99, unit: 'each' },
-    { id: 'exhaust-fan-bath', name: 'Bathroom Exhaust Fan 80 CFM', category: 'Specialty & Safety', price: 29.98, unit: 'each' },
-    { id: 'exhaust-fan-quiet', name: 'Ultra-Quiet Bathroom Fan 110 CFM', category: 'Specialty & Safety', price: 79.98, unit: 'each' },
-
-    // ===================
-    // EV CHARGING & HIGH-AMP
-    // ===================
-    { id: 'ev-charger-l2-32a', name: '32A Level 2 EV Charger', category: 'EV Charging', price: 499.00, unit: 'each' },
-    { id: 'ev-charger-l2-40a', name: '40A Level 2 EV Charger', category: 'EV Charging', price: 649.00, unit: 'each' },
-    { id: 'ev-charger-smart', name: 'Smart WiFi EV Charger 32A', category: 'EV Charging', price: 699.00, unit: 'each' },
-    { id: 'nema-6-50', name: 'NEMA 6-50 50A 240V Receptacle', category: 'EV Charging', price: 24.98, unit: 'each' },
-    { id: 'nema-14-50', name: 'NEMA 14-50 50A 240V Receptacle', category: 'EV Charging', price: 29.98, unit: 'each' },
-    { id: 'dryer-cord-4wire', name: '4-Wire 30A Dryer Cord', category: 'EV Charging', price: 34.98, unit: 'each' },
-
-    // ===================
-    // WIRE NUTS & CONNECTORS
-    // ===================
-    { id: 'wirenut-yellow', name: 'Yellow Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 12.98, unit: 'pack' },
-    { id: 'wirenut-red', name: 'Red Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 14.98, unit: 'pack' },
-    { id: 'wirenut-blue', name: 'Blue Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 16.98, unit: 'pack' },
-    { id: 'wirenut-orange', name: 'Orange Wire Nuts (100 pack)', category: 'Wire Nuts & Connectors', price: 9.98, unit: 'pack' },
-    { id: 'wago-221', name: 'WAGO 221 Lever Connectors (25 pack)', category: 'Wire Nuts & Connectors', price: 24.98, unit: 'pack' },
-    { id: 'wiremold-splice', name: 'In-Line Splice Kit', category: 'Wire Nuts & Connectors', price: 8.98, unit: 'each' },
-
-    // ===================
-    // COVERS & PLATES
-    // ===================
-    { id: 'plate-1gang-white', name: 'Single Gang Toggle Switch Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
-    { id: 'plate-1gang-almond', name: 'Single Gang Toggle Switch Plate - Almond', category: 'Covers & Plates', price: 1.28, unit: 'each' },
-    { id: 'plate-1gang-decora', name: 'Single Gang Decora Switch Plate - White', category: 'Covers & Plates', price: 1.48, unit: 'each' },
-    { id: 'plate-2gang-white', name: 'Double Gang Switch Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' },
-    { id: 'plate-outlet-white', name: 'Duplex Outlet Cover Plate - White', category: 'Covers & Plates', price: 0.78, unit: 'each' },
-    { id: 'plate-blank-white', name: 'Blank Cover Plate - White', category: 'Covers & Plates', price: 0.98, unit: 'each' },
-    { id: 'plate-gfci-white', name: 'GFCI Outlet Cover Plate - White', category: 'Covers & Plates', price: 1.98, unit: 'each' }
-  ];
 
   // Material pricing markup tiers
-  const materialMarkupTiers = [
+  const materialMarkupTiers = useMemo(() => [
     { min: 0, max: 25, markup: 0.50 },      // 0-$25: 50% markup
     { min: 25.01, max: 50, markup: 0.40 },  // $25.01-$50: 40% markup  
     { min: 50.01, max: 100, markup: 0.35 }, // $50.01-$100: 35% markup
     { min: 100.01, max: 250, markup: 0.30 }, // $100.01-$250: 30% markup
     { min: 250.01, max: 500, markup: 0.25 }, // $250.01-$500: 25% markup
     { min: 500.01, max: Infinity, markup: 0.20 } // $500+: 20% markup
-  ];
+  ], []);
 
   // Function to calculate markup price based on cost tiers
-  const calculateMarkupPrice = (costPrice: number): number => {
+  const calculateMarkupPrice = useCallback((costPrice: number): number => {
     const tier = materialMarkupTiers.find(tier => 
       costPrice >= tier.min && costPrice <= tier.max
     );
@@ -1556,16 +1557,16 @@ const SchedulingCalendar: React.FC = () => {
     if (!tier) return costPrice * 1.35; // Default 35% if no tier matches
     
     return costPrice * (1 + tier.markup);
-  };
+  }, [materialMarkupTiers]);
 
   // Function to get markup percentage for display
-  const getMarkupPercentage = (costPrice: number): number => {
+  const getMarkupPercentage = useCallback((costPrice: number): number => {
     const tier = materialMarkupTiers.find(tier => 
       costPrice >= tier.min && costPrice <= tier.max
     );
     
     return tier ? tier.markup * 100 : 35; // Default 35% if no tier matches
-  };
+  }, [materialMarkupTiers]);
 
   // Material catalog item type
   type MaterialCatalogItem = {
@@ -1603,7 +1604,7 @@ const SchedulingCalendar: React.FC = () => {
       }));
     }
     // Fall back to static catalog if no inventory data - apply markup to static prices
-    return fallbackMaterialsCatalog.map(item => ({
+    return FALLBACK_MATERIALS_CATALOG.map(item => ({
       ...item,
       price: calculateMarkupPrice(item.price), // Apply markup to fallback prices
       current_stock: undefined,
@@ -1614,7 +1615,7 @@ const SchedulingCalendar: React.FC = () => {
       costPrice: item.price, // Original price becomes cost price
       markupPercentage: getMarkupPercentage(item.price)
     }));
-  }, [inventoryItems]);
+  }, [inventoryItems, calculateMarkupPrice, getMarkupPercentage]);
 
   const addMaterialToLineItems = (material: MaterialCatalogItem, quantity?: number) => {
     const qty = quantity || selectedMaterialQuantity[material.id] || 1;

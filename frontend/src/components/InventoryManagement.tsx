@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -227,7 +227,7 @@ const InventoryManagement: React.FC = () => {
     }
   ];
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       // For demo, use local data
@@ -239,11 +239,12 @@ const InventoryManagement: React.FC = () => {
       setError('Failed to load inventory data');
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const getStockStatus = (item: Item) => {
     if (item.current_stock <= item.reorder_point) return 'critical';

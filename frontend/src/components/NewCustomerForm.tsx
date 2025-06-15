@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -115,7 +115,7 @@ const NewCustomerForm: React.FC = () => {
     }
   };
 
-  const handleAddressSearch = async () => {
+  const handleAddressSearch = useCallback(async () => {
     const fullAddress = `${formData.street} ${formData.unit}, ${formData.city}, ${formData.state} ${formData.zip}`.trim();
     if (fullAddress.length > 5) {
       const coordinates = await searchAddress(fullAddress);
@@ -124,7 +124,7 @@ const NewCustomerForm: React.FC = () => {
         setMarkerPosition(coordinates);
       }
     }
-  };
+  }, [formData.street, formData.unit, formData.city, formData.state, formData.zip]);
 
   const handleMapAddressSelect = (address: string, coordinates: google.maps.LatLngLiteral) => {
     // Parse the address and update form fields
@@ -224,7 +224,7 @@ const NewCustomerForm: React.FC = () => {
     }, 1000);
     
     return () => clearTimeout(timeoutId);
-  }, [formData.street, formData.city, formData.state, formData.zip]);
+  }, [formData.street, formData.city, formData.state, formData.zip, handleAddressSearch]);
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>

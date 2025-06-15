@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -54,6 +54,65 @@ interface TechnicianPerformance {
   utilizationRate: number;
 }
 
+// Demo data
+const DEMO_BUSINESS_METRICS: BusinessMetrics = {
+  totalCustomers: 142,
+  activeJobs: 8,
+  monthlyRevenue: 12450.00,
+  pendingInvoices: 3,
+  technicianUtilization: 85.5,
+  customerSatisfaction: 4.6
+};
+
+const DEMO_FINANCIAL_DATA: FinancialData = {
+  totalRevenue: 145670.00,
+  totalOutstanding: 3240.00,
+  averageInvoiceAmount: 485.50,
+  paymentProcessingTime: 5.2,
+  revenueTrend: [
+    { month: '2023-08', revenue: 8200 },
+    { month: '2023-09', revenue: 9800 },
+    { month: '2023-10', revenue: 11200 },
+    { month: '2023-11', revenue: 10500 },
+    { month: '2023-12', revenue: 13400 },
+    { month: '2024-01', revenue: 12450 }
+  ],
+  topCustomers: [
+    { id: 1, name: 'ABC Corporation', totalSpent: 8900.00 },
+    { id: 2, name: 'Smith Family Trust', totalSpent: 4200.00 },
+    { id: 3, name: 'Downtown Apartments', totalSpent: 3800.00 },
+    { id: 4, name: 'Main Street Mall', totalSpent: 3200.00 },
+    { id: 5, name: 'Johnson Residence', totalSpent: 2100.00 }
+  ]
+};
+
+const DEMO_TECHNICIAN_PERFORMANCE: TechnicianPerformance[] = [
+  {
+    id: 1,
+    name: 'Mike Johnson',
+    jobsCompleted: 45,
+    revenueGenerated: 28500.00,
+    customerRating: 4.8,
+    utilizationRate: 92.0
+  },
+  {
+    id: 2,
+    name: 'Tom Wilson',
+    jobsCompleted: 38,
+    revenueGenerated: 24200.00,
+    customerRating: 4.6,
+    utilizationRate: 87.5
+  },
+  {
+    id: 3,
+    name: 'Steve Miller',
+    jobsCompleted: 32,
+    revenueGenerated: 19800.00,
+    customerRating: 4.4,
+    utilizationRate: 78.0
+  }
+];
+
 const AnalyticsDashboard: React.FC = () => {
   const [businessMetrics, setBusinessMetrics] = useState<BusinessMetrics | null>(null);
   const [financialData, setFinancialData] = useState<FinancialData | null>(null);
@@ -61,66 +120,7 @@ const AnalyticsDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Demo data
-  const demoBusinessMetrics: BusinessMetrics = {
-    totalCustomers: 142,
-    activeJobs: 8,
-    monthlyRevenue: 12450.00,
-    pendingInvoices: 3,
-    technicianUtilization: 85.5,
-    customerSatisfaction: 4.6
-  };
-
-  const demoFinancialData: FinancialData = {
-    totalRevenue: 145670.00,
-    totalOutstanding: 3240.00,
-    averageInvoiceAmount: 485.50,
-    paymentProcessingTime: 5.2,
-    revenueTrend: [
-      { month: '2023-08', revenue: 8200 },
-      { month: '2023-09', revenue: 9800 },
-      { month: '2023-10', revenue: 11200 },
-      { month: '2023-11', revenue: 10500 },
-      { month: '2023-12', revenue: 13400 },
-      { month: '2024-01', revenue: 12450 }
-    ],
-    topCustomers: [
-      { id: 1, name: 'ABC Corporation', totalSpent: 8900.00 },
-      { id: 2, name: 'Smith Family Trust', totalSpent: 4200.00 },
-      { id: 3, name: 'Downtown Apartments', totalSpent: 3800.00 },
-      { id: 4, name: 'Main Street Mall', totalSpent: 3200.00 },
-      { id: 5, name: 'Johnson Residence', totalSpent: 2100.00 }
-    ]
-  };
-
-  const demoTechnicianPerformance: TechnicianPerformance[] = [
-    {
-      id: 1,
-      name: 'Mike Johnson',
-      jobsCompleted: 45,
-      revenueGenerated: 28500.00,
-      customerRating: 4.8,
-      utilizationRate: 92.0
-    },
-    {
-      id: 2,
-      name: 'Tom Wilson',
-      jobsCompleted: 38,
-      revenueGenerated: 24200.00,
-      customerRating: 4.6,
-      utilizationRate: 87.5
-    },
-    {
-      id: 3,
-      name: 'Steve Miller',
-      jobsCompleted: 32,
-      revenueGenerated: 19800.00,
-      customerRating: 4.4,
-      utilizationRate: 78.0
-    }
-  ];
-
-  const loadAnalyticsData = async () => {
+  const loadAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -177,24 +177,25 @@ const AnalyticsDashboard: React.FC = () => {
         setTechnicianPerformance(techPerformance);
       } else {
         // Fallback to demo data if API doesn't return proper data
-        setTechnicianPerformance(demoTechnicianPerformance);
+        setTechnicianPerformance(DEMO_TECHNICIAN_PERFORMANCE);
       }
       
       setLoading(false);
     } catch (err) {
       console.error('Error loading analytics data:', err);
       // Fallback to demo data in case of API error
-      setBusinessMetrics(demoBusinessMetrics);
-      setFinancialData(demoFinancialData);
-      setTechnicianPerformance(demoTechnicianPerformance);
+      setBusinessMetrics(DEMO_BUSINESS_METRICS);
+      setFinancialData(DEMO_FINANCIAL_DATA);
+      setTechnicianPerformance(DEMO_TECHNICIAN_PERFORMANCE);
       setError('Failed to load live analytics data - showing demo data');
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadAnalyticsData();
-  }, []);
+  }, [loadAnalyticsData]);
 
   const getPerformanceColor = (value: number, threshold: number) => {
     if (value >= threshold) return 'success';
