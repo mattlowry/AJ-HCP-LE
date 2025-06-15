@@ -52,7 +52,9 @@
       "Bash(export:*)",
       "Bash(/usr/bin/git --version)",
       "Bash(npm update:*)",
-      "Bash(/usr/bin/git status)"
+      "Bash(/usr/bin/git status)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run lint:*)"
     ],
     "deny": []
   },
