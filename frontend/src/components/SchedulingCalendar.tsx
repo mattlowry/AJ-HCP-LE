@@ -5,6 +5,8 @@ import { Item } from '../types/inventory';
 // Removed unused import: Category
 import { CustomerListItem } from '../types/customer';
 import { JobListItem } from '../types/job';
+import { useNavigation } from '../contexts/NavigationContext';
+import MaterialsCatalogSidebar from './MaterialsCatalogSidebar';
 import {
   Card,
   CardContent,
@@ -133,6 +135,7 @@ interface TimeSlot {
 
 
 const SchedulingCalendar: React.FC = () => {
+  const { showSidebar, hideSidebar } = useNavigation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,8 +190,6 @@ const SchedulingCalendar: React.FC = () => {
     type: 'labor' as 'labor' | 'material' | 'service'
   });
   
-  const [showMaterialsCatalog, setShowMaterialsCatalog] = useState(false);
-  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
   const [selectedMaterialQuantity, setSelectedMaterialQuantity] = useState<Record<string, number>>({});
   
   // Inventory-related state
@@ -1338,6 +1339,31 @@ const SchedulingCalendar: React.FC = () => {
     }
   };
 
+  // Sidebar toggle functions
+  const showMaterialsCatalogSidebar = useCallback(() => {
+    const sidebarContent = (
+      <MaterialsCatalogSidebar
+        materialsCatalog={materialsCatalog}
+        lowStockItems={lowStockItems}
+        inventoryLoading={inventoryLoading}
+        materialMarkupTiers={materialMarkupTiers}
+        selectedMaterialQuantity={selectedMaterialQuantity}
+        setSelectedMaterialQuantity={setSelectedMaterialQuantity}
+        onAddMaterial={addMaterialToLineItems}
+      />
+    );
+    showSidebar('Materials Catalog', sidebarContent, 350);
+  }, [materialsCatalog, lowStockItems, inventoryLoading, materialMarkupTiers, selectedMaterialQuantity, setSelectedMaterialQuantity, addMaterialToLineItems, showSidebar]);
+
+  // Show sidebar on mount, hide on unmount
+  useEffect(() => {
+    showMaterialsCatalogSidebar();
+    
+    return () => {
+      hideSidebar();
+    };
+  }, [hideSidebar, showMaterialsCatalogSidebar]);
+
   // Estimate approval workflow functions
   const handleEstimateStatusUpdate = async (jobId: string, newStatus: NonNullable<Job['estimate_status']>) => {
     try {
@@ -2229,7 +2255,7 @@ AJ Long Electric Team`;
                           <Button
                             fullWidth
                             variant="outlined"
-                            onClick={() => setShowMaterialsCatalog(true)}
+                            onClick={showMaterialsCatalogSidebar}
                             startIcon={<InventoryIcon />}
                             size="small"
                           >
@@ -2571,207 +2597,6 @@ AJ Long Electric Team`;
               </Button>
             </Box>
           ) : null}
-        </DialogActions>
-      </Dialog>
-
-      {/* Materials Catalog Dialog */}
-      <Dialog
-        open={showMaterialsCatalog}
-        onClose={() => setShowMaterialsCatalog(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          🔧 Electrical Parts & Materials Catalog
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Select materials to add to your estimate. Prices include standard markup.
-          </Typography>
-          
-          {/* Low stock warning */}
-          {lowStockItems.length > 0 && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              <strong>Low Stock Alert:</strong> {lowStockItems.length} item{lowStockItems.length > 1 ? 's' : ''} running low. 
-              Items: {lowStockItems.slice(0, 3).map(item => item.name).join(', ')}
-              {lowStockItems.length > 3 && ` and ${lowStockItems.length - 3} more`}.
-            </Alert>
-          )}
-          
-          {/* Inventory loading indicator */}
-          {inventoryLoading && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <CircularProgress size={16} />
-              <Typography variant="caption">Loading inventory data...</Typography>
-            </Box>
-          )}
-          
-          {/* Search bar */}
-          <TextField
-            fullWidth
-            placeholder="Search materials..."
-            value={materialSearchQuery}
-            onChange={(e) => setMaterialSearchQuery(e.target.value)}
-            sx={{ mb: 2 }}
-            size="small"
-          />
-          
-          {/* Markup tier information */}
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-              📊 Material Markup Tiers
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {materialMarkupTiers.map((tier, index) => (
-                <Chip
-                  key={index}
-                  label={`$${tier.min === 0 ? '0' : tier.min.toFixed(2)}-${tier.max === Infinity ? '∞' : '$' + tier.max.toFixed(2)}: ${(tier.markup * 100).toFixed(0)}%`}
-                  size="small"
-                  variant="outlined"
-                  sx={{ fontSize: '11px' }}
-                />
-              ))}
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Prices shown include automatic markup based on material cost
-            </Typography>
-          </Box>
-          
-          {/* Group materials by category */}
-          {Array.from(new Set(materialsCatalog
-            .filter(item => 
-              materialSearchQuery === '' || 
-              item.name.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
-              item.category.toLowerCase().includes(materialSearchQuery.toLowerCase())
-            )
-            .map(item => item.category)
-          )).map(category => {
-            const filteredMaterials = materialsCatalog
-              .filter(item => item.category === category)
-              .filter(item => 
-                materialSearchQuery === '' || 
-                item.name.toLowerCase().includes(materialSearchQuery.toLowerCase()) ||
-                item.category.toLowerCase().includes(materialSearchQuery.toLowerCase())
-              );
-            
-            if (filteredMaterials.length === 0) return null;
-            
-            return (
-              <Box key={category} sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ 
-                  color: 'primary.main', 
-                  borderBottom: '2px solid',
-                  borderColor: 'primary.main',
-                  pb: 0.5,
-                  mb: 2
-                }}>
-                  {category}
-                </Typography>
-                <Grid container spacing={1}>
-                  {filteredMaterials.map(material => (
-                    <Grid item xs={12} sm={6} md={4} key={material.id}>
-                      <Card 
-                        sx={{ 
-                          height: '100%',
-                          transition: 'all 0.2s',
-                          '&:hover': { 
-                            transform: 'translateY(-2px)',
-                            boxShadow: 3
-                          }
-                        }}
-                      >
-                        <CardContent sx={{ p: 2 }}>
-                          <Typography variant="body2" fontWeight="bold" noWrap title={material.name}>
-                            {material.name}
-                          </Typography>
-                          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                            ${material.price.toFixed(2)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            per {material.unit}
-                          </Typography>
-                          
-                          {/* Cost and markup information */}
-                          {material.costPrice && material.markupPercentage && (
-                            <Box sx={{ mt: 0.5 }}>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                Cost: ${material.costPrice.toFixed(2)} • Markup: {material.markupPercentage.toFixed(0)}%
-                              </Typography>
-                            </Box>
-                          )}
-                          
-                          {/* Stock information for inventory items */}
-                          {material.current_stock !== undefined && (
-                            <Box sx={{ mt: 1 }}>
-                              <Typography 
-                                variant="caption" 
-                                color={material.isLowStock ? 'error' : 'text.secondary'}
-                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-                              >
-                                {material.isLowStock && (
-                                  <span style={{ color: '#f44336', fontSize: '12px' }}>⚠️</span>
-                                )}
-                                Stock: {material.current_stock} {material.unit}
-                                {material.isLowStock && ' (Low)'}
-                              </Typography>
-                              {material.sku && (
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '10px' }}>
-                                  SKU: {material.sku}
-                                </Typography>
-                              )}
-                            </Box>
-                          )}
-                          
-                          {/* Quantity selector and add button */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={selectedMaterialQuantity[material.id] || 1}
-                              onChange={(e) => {
-                                const newQty = parseInt(e.target.value) || 1;
-                                const maxQty = material.current_stock !== undefined ? material.current_stock : 999;
-                                setSelectedMaterialQuantity(prev => ({
-                                  ...prev,
-                                  [material.id]: Math.max(1, Math.min(newQty, maxQty))
-                                }));
-                              }}
-                              inputProps={{ 
-                                min: 1, 
-                                max: material.current_stock !== undefined ? material.current_stock : 999 
-                              }}
-                              sx={{ width: 60 }}
-                              onClick={(e) => e.stopPropagation()}
-                              disabled={material.current_stock === 0}
-                            />
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addMaterialToLineItems(material);
-                              }}
-                              startIcon={<AddItemIcon />}
-                              fullWidth
-                              disabled={material.current_stock === 0}
-                              color={material.isLowStock ? 'warning' : 'primary'}
-                            >
-                              {material.current_stock === 0 ? 'Out of Stock' : 'Add'}
-                            </Button>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            );
-          })}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowMaterialsCatalog(false)}>
-            Close
-          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,70 +1,93 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
   Box,
-  IconButton
+  Drawer,
+  Toolbar,
+  Typography,
+  Paper,
+  Divider,
+  useTheme
 } from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
-import Navigation from './Navigation';
-
-const drawerWidth = 240;
+import TopNavigation from './TopNavigation';
+import { useNavigation } from '../contexts/NavigationContext';
 
 const MainLayout: React.FC = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const { sidebar } = useNavigation();
+  const theme = useTheme();
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            AJ Long Electric - Field Service Management
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
-      <Navigation 
-        open={mobileOpen} 
-        onClose={handleDrawerToggle}
-      />
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          height: '100vh',
-          overflow: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
-          <Outlet />
+    <Box sx={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
+      <TopNavigation />
+      
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Main Content Area */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            height: '100%',
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            width: sidebar.show ? `calc(100% - ${sidebar.width}px)` : '100%',
+            transition: theme.transitions.create(['width', 'margin'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+          }}
+        >
+          <Toolbar /> {/* Spacer for fixed AppBar */}
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            <Outlet />
+          </Box>
         </Box>
+
+        {/* Conditional Sidebar */}
+        {sidebar.show && (
+          <Drawer
+            variant="permanent"
+            anchor="right"
+            sx={{
+              width: sidebar.width,
+              flexShrink: 0,
+              '& .MuiDrawer-paper': {
+                width: sidebar.width,
+                boxSizing: 'border-box',
+                position: 'relative',
+                height: '100%',
+                border: 'none',
+                borderLeft: `1px solid ${theme.palette.divider}`,
+              },
+            }}
+          >
+            <Toolbar /> {/* Spacer for fixed AppBar */}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                height: '100%', 
+                borderRadius: 0,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {sidebar.title && (
+                <>
+                  <Box sx={{ p: 2 }}>
+                    <Typography variant="h6" component="h2">
+                      {sidebar.title}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                </>
+              )}
+              <Box sx={{ flex: 1, overflow: 'auto' }}>
+                {sidebar.content}
+              </Box>
+            </Paper>
+          </Drawer>
+        )}
       </Box>
     </Box>
   );

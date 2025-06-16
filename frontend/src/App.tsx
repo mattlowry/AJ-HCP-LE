@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import ErrorBoundary, { PageErrorBoundary } from './components/ErrorBoundary';
 import GlobalErrorHandler from './components/GlobalErrorHandler';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -406,7 +407,8 @@ function App() {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <AuthProvider>
-            <Router>
+            <NavigationProvider>
+              <Router>
               <Routes>
                 {/* Public Routes */}
                 <Route 
@@ -585,8 +587,9 @@ function App() {
                   />
                 </Route>
               </Routes>
-            </Router>
-            <GlobalErrorHandler />
+              </Router>
+              <GlobalErrorHandler />
+            </NavigationProvider>
           </AuthProvider>
         </ThemeProvider>
       </ErrorBoundary>
