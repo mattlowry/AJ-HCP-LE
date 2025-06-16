@@ -82,7 +82,11 @@ api.interceptors.response.use(
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: AxiosError): string => {
   if (!error.response) {
-    return 'Network connection error. Please check your internet connection.';
+    // Check if it's a network error to localhost (backend server not running)
+    if (error.code === 'ECONNREFUSED' || error.message?.includes('localhost') || error.message?.includes('Network Error')) {
+      return 'Backend server is not running. Please start the Django backend server on localhost:8000 or check your server configuration.';
+    }
+    return 'Network connection error. Please check your internet connection and server availability.';
   }
 
   const status = error.response.status;

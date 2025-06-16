@@ -140,6 +140,7 @@ const SchedulingCalendar: React.FC = () => {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -362,7 +363,8 @@ const SchedulingCalendar: React.FC = () => {
     console.log('📅 Week dates updated:', dates);
     setWeekDates(dates);
   }, [weekStart]);
-  
+
+
   const fetchJobsCallback = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -389,6 +391,7 @@ const SchedulingCalendar: React.FC = () => {
       });
       const convertedJobs = scheduledResponse.data.results.map(convertJobListItemToJob);
       setJobs(convertedJobs);
+      setRetryCount(0); // Reset retry count on success
       console.log('✅ Successfully loaded jobs from API:', convertedJobs.length);
     } catch (scheduledError) {
       console.error('Failed to fetch scheduled jobs:', scheduledError);
@@ -1553,19 +1556,27 @@ AJ Long Electric Team`;
   if (error) {
     return (
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
-        <Alert severity="error" sx={{ mb: 3, maxWidth: 600 }}>
+        <Alert severity="error" sx={{ mb: 3, maxWidth: 700 }}>
           <Typography variant="h6" gutterBottom>
             Schedule Loading Error
           </Typography>
-          <Typography variant="body2">
+          <Typography variant="body2" sx={{ mb: 2 }}>
             {error}
           </Typography>
+          
+          {error.includes('Backend server') && (
+            <Typography variant="body2" sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+              💡 Start the Django backend server: python manage.py runserver
+            </Typography>
+          )}
         </Alert>
+        
         <Button 
           variant="contained" 
           startIcon={<RefreshIcon />}
           onClick={() => {
             setError(null);
+            setRetryCount(0);
             fetchJobsCallback();
           }}
         >
