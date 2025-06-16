@@ -112,7 +112,14 @@ const TopNavigation: React.FC<TopNavigationProps> = ({ title = 'AJ Long Electric
 
   return (
     <>
-      <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          zIndex: theme.zIndex.drawer + 1,
+          backgroundColor: theme.palette.primary.main,
+          color: 'white'
+        }}
+      >
         <Toolbar>
           {/* Logo/Brand */}
           <Typography 
@@ -175,8 +182,20 @@ const TopNavigation: React.FC<TopNavigationProps> = ({ title = 'AJ Long Electric
             </Tabs>
           )}
 
-          {/* Spacer for mobile */}
-          {isMobile && <Box sx={{ flexGrow: 1 }} />}
+          {/* Mobile Logo */}
+          {isMobile && (
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                fontWeight: 'bold',
+                flexGrow: 1,
+                color: 'white'
+              }}
+            >
+              AJ Long Electric
+            </Typography>
+          )}
 
           {/* User Profile Section */}
           {user && (
@@ -189,7 +208,8 @@ const TopNavigation: React.FC<TopNavigationProps> = ({ title = 'AJ Long Electric
                   sx={{ 
                     textTransform: 'capitalize',
                     color: 'white',
-                    borderColor: 'rgba(255, 255, 255, 0.3)'
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
                   }}
                   variant="outlined"
                 />
