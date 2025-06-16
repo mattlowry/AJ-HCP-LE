@@ -7,7 +7,42 @@ import { Invoice, Estimate, Payment } from '../types/billing';
 import { Item, Category, Supplier, StockMovement, PurchaseOrder } from '../types/inventory';
 import { Appointment, TechnicianAvailability, ScheduleConflict } from '../types/scheduling';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+// Smart API URL detection based on environment
+const getApiBaseUrl = (): string => {
+  // If explicit URL is set, use it
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Auto-detect based on current host
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // Production on Render
+    if (hostname === 'aj-long-electric.onrender.com') {
+      return 'https://aj-long-electric-backend.onrender.com/api';
+    }
+    
+    // Local development
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8000/api';
+    }
+  }
+  
+  // Fallback to local development
+  return 'http://localhost:8000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Log API configuration in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🌐 API Configuration:', {
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+    API_BASE_URL,
+    REACT_APP_API_URL: process.env.REACT_APP_API_URL
+  });
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -82,11 +117,17 @@ api.interceptors.response.use(
 // Helper function to get user-friendly error messages
 const getErrorMessage = (error: AxiosError): string => {
   if (!error.response) {
+    // Check for CORS errors
+    if (error.message?.includes('CORS') || error.message?.includes('Access-Control-Allow-Origin')) {
+      return `CORS error: The backend server at ${API_BASE_URL} is not allowing requests from this domain. Please check your backend CORS configuration.`;
+    }
+    
     // Check if it's a network error to localhost (backend server not running)
     if (error.code === 'ECONNREFUSED' || error.message?.includes('localhost') || error.message?.includes('Network Error')) {
-      return 'Backend server is not running. Please start the Django backend server on localhost:8000 or check your server configuration.';
+      return `Backend server is not responding at ${API_BASE_URL}. Please verify the server is running and accessible.`;
     }
-    return 'Network connection error. Please check your internet connection and server availability.';
+    
+    return `Network connection error. Cannot reach backend server at ${API_BASE_URL}. Please check your server configuration.`;
   }
 
   const status = error.response.status;
