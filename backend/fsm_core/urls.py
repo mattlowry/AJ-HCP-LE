@@ -20,8 +20,23 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.views.static import serve
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 import os
+
+def api_health_check(request):
+    """Simple API health check endpoint"""
+    return JsonResponse({
+        'status': 'healthy',
+        'message': 'AJ Long Electric Backend API is running',
+        'endpoints': [
+            '/api/customers/',
+            '/api/jobs/',
+            '/api/scheduling/',
+            '/api/billing/',
+            '/api/inventory/',
+            '/api/analytics/',
+        ]
+    })
 
 def react_app_view(request):
     """Fallback view for React app"""
@@ -98,6 +113,8 @@ def react_app_view(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # API health check endpoint
+    path('api/', api_health_check, name='api_health_check'),
     # API endpoints under /api/ prefix for consistency
     path('api/', include('customers.urls')),
     path('api/jobs/', include('jobs.urls')),

@@ -69,20 +69,14 @@ MIDDLEWARE = [
 ]
 
 # Database
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'fsm_db'),
-        'USER': os.environ.get('POSTGRES_USER', 'fsm_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST', 'postgres'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-        'OPTIONS': {
-            'sslmode': 'prefer',
-        },
-        'CONN_MAX_AGE': 600,
-        'CONN_HEALTH_CHECKS': True,
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 # Cache configuration - Use in-memory cache for basic hosting
@@ -116,6 +110,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_TRUSTED_ORIGINS = [
+    'https://aj-long-electric.onrender.com',
     'https://aj-long-electric.com',
     'https://www.aj-long-electric.com',
 ]
@@ -177,6 +172,14 @@ CORS_ALLOWED_ORIGINS = [
     "https://aj-long-electric.com",
     "https://www.aj-long-electric.com",
 ]
+
+# Allow additional CORS origins from environment variable
+if os.environ.get('CORS_ALLOWED_ORIGINS'):
+    additional_origins = os.environ.get('CORS_ALLOWED_ORIGINS').split(',')
+    CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in additional_origins])
+
+# Enable CORS for all origins during development (if needed)
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
 # Logging
@@ -260,13 +263,4 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
-# Monitoring
-INSTALLED_APPS += [
-    'django_prometheus',
-]
-
-MIDDLEWARE = [
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
-] + MIDDLEWARE + [
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
-]
+# Note: django_prometheus not included in basic setup
