@@ -47,6 +47,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DEBUG = False
 
 ALLOWED_HOSTS = [
+    'aj-long-electric-backend.onrender.com',
     'aj-long-electric.onrender.com',
     'aj-long-electric.com',
     'www.aj-long-electric.com',
@@ -73,7 +74,7 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
         conn_max_age=600,
         conn_health_checks=True,
     )
