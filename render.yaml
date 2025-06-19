@@ -5,7 +5,7 @@ services:
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python backend/manage.py migrate && python backend/manage.py collectstatic --noinput && gunicorn --pythonpath backend fsm_core.wsgi:application
     plan: free
-    healthCheckPath: /api/
+    healthCheckPath: /api/health/
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
