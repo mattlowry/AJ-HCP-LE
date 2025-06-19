@@ -30,6 +30,7 @@ def api_health_check(request):
         'message': 'AJ Long Electric Backend API is running',
         'endpoints': [
             '/api/customers/',
+            '/api/jobs/technicians/',
             '/api/jobs/',
             '/api/scheduling/',
             '/api/billing/',
@@ -95,13 +96,18 @@ def react_app_view(request):
             <div class="api-list">
                 <ul>
                     <li><a href="/admin/">🛡️ Django Admin Interface</a></li>
+                    <li><a href="/api/health/">🔍 API Health Check</a></li>
                     <li><a href="/api/customers/">👥 Customer API</a></li>
-                    <li><a href="/api/properties/">🏠 Property API</a></li>
-                    <li><a href="/api/contacts/">📞 Contact API</a></li>
-                    <li><a href="/api/reviews/">⭐ Review API</a></li>
-                    <li><a href="/jobs/api/jobs/">📋 Job Management API</a></li>
-                    <li><a href="/jobs/api/technicians/">🔧 Technician API</a></li>
-                    <li><a href="/jobs/api/emergency-calls/">🚨 Emergency Call API</a></li>
+                    <li><a href="/api/customers/properties/">🏠 Property API</a></li>
+                    <li><a href="/api/customers/contacts/">📞 Contact API</a></li>
+                    <li><a href="/api/customers/reviews/">⭐ Review API</a></li>
+                    <li><a href="/api/jobs/">📋 Job Management API</a></li>
+                    <li><a href="/api/jobs/technicians/">🔧 Technician API</a></li>
+                    <li><a href="/api/jobs/emergency-calls/">🚨 Emergency Call API</a></li>
+                    <li><a href="/api/scheduling/">📅 Scheduling API</a></li>
+                    <li><a href="/api/billing/">💰 Billing API</a></li>
+                    <li><a href="/api/inventory/">📦 Inventory API</a></li>
+                    <li><a href="/api/analytics/">📊 Analytics API</a></li>
                 </ul>
             </div>
             
@@ -113,8 +119,8 @@ def react_app_view(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # API health check endpoint
-    path('api/', api_health_check, name='api_health_check'),
+    # API health check endpoint - moved to specific path to avoid conflict
+    path('api/health/', api_health_check, name='api_health_check'),
     # API endpoints under /api/ prefix for consistency
     path('api/', include('customers.urls')),
     path('api/jobs/', include('jobs.urls')),

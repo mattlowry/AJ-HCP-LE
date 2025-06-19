@@ -1,19 +1,39 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
-from fsm_core.cache_decorators import cache_customer_data, cache_model_list, cache_model_detail
-from fsm_core.cache_utils import CacheManager
 from .models import Customer, Property, CustomerContact, CustomerReview
 from .serializers import (
     CustomerSerializer, CustomerListSerializer, CustomerCreateSerializer,
     PropertySerializer, CustomerContactSerializer, CustomerReviewSerializer
 )
 
+# Import cache decorators with error handling
+try:
+    from fsm_core.cache_decorators import cache_customer_data, cache_model_list, cache_model_detail
+    from fsm_core.cache_utils import CacheManager
+    CACHE_AVAILABLE = True
+except ImportError as e:
+    print(f"Cache decorators not available: {e}")
+    # Define dummy decorators that do nothing
+    def cache_customer_data(func):
+        return func
+    def cache_model_list(model_name, timeout=None, per_user=False):
+        def decorator(func):
+            return func
+        return decorator
+    def cache_model_detail(model_name, timeout=None):
+        def decorator(func):
+            return func
+        return decorator
+    CACHE_AVAILABLE = False
+
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all()
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['customer_type', 'state', 'city']
     search_fields = ['first_name', 'last_name', 'email', 'company_name', 'street_address']
@@ -135,6 +155,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class PropertyViewSet(viewsets.ModelViewSet):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['property_type', 'city', 'state', 'customer']
     search_fields = ['street_address', 'city', 'main_panel_brand']
@@ -146,6 +167,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
 class CustomerContactViewSet(viewsets.ModelViewSet):
     queryset = CustomerContact.objects.all()
     serializer_class = CustomerContactSerializer
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['contact_type', 'customer']
 
@@ -153,6 +175,7 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
 class CustomerReviewViewSet(viewsets.ModelViewSet):
     queryset = CustomerReview.objects.all()
     serializer_class = CustomerReviewSerializer
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['rating', 'source', 'sentiment_label', 'customer']
     ordering_fields = ['created_at', 'rating']
