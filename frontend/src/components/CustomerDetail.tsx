@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { SelectChangeEvent } from '@mui/material';
 import {
   Box,
   Typography,
@@ -40,6 +41,8 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { customerApi, propertyApi } from '../services/api';
 import { Customer, Property } from '../types/customer';
+import { ComponentErrorBoundary } from './ErrorBoundary';
+import { useRenderPerformance } from '../hooks/usePerformanceOptimization';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -63,9 +66,12 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const CustomerDetail: React.FC = () => {
+const CustomerDetailComponent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  // Performance monitoring
+  useRenderPerformance('CustomerDetail');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
@@ -121,12 +127,12 @@ const CustomerDetail: React.FC = () => {
     }
   }, [id, fetchCustomer]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
   const handleInputChange = (field: keyof Customer, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev: Partial<Customer>) => ({
       ...prev,
       [field]: value
     }));
@@ -212,7 +218,7 @@ const CustomerDetail: React.FC = () => {
   };
 
   const handlePropertyInputChange = (field: keyof Property, value: any) => {
-    setPropertyFormData(prev => ({
+    setPropertyFormData((prev: Partial<Property>) => ({
       ...prev,
       [field]: value
     }));
@@ -264,7 +270,7 @@ const CustomerDetail: React.FC = () => {
   }
 
   const averageRating = customer?.reviews?.length 
-    ? customer.reviews.reduce((sum, review) => sum + review.rating, 0) / customer.reviews.length
+    ? customer.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / customer.reviews.length
     : 0;
 
   const displayData = isEditing ? formData : customer;
@@ -354,7 +360,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="First Name"
                   value={formData.first_name || ''}
-                  onChange={(e) => handleInputChange('first_name', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('first_name', e.target.value)}
                   required
                 />
               </Grid>
@@ -363,7 +369,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="Last Name"
                   value={formData.last_name || ''}
-                  onChange={(e) => handleInputChange('last_name', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('last_name', e.target.value)}
                   required
                 />
               </Grid>
@@ -373,7 +379,7 @@ const CustomerDetail: React.FC = () => {
                   label="Email"
                   type="email"
                   value={formData.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)}
                   required
                 />
               </Grid>
@@ -382,7 +388,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="Phone"
                   value={formData.phone || ''}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('phone', e.target.value)}
                   required
                 />
               </Grid>
@@ -392,7 +398,7 @@ const CustomerDetail: React.FC = () => {
                   <Select
                     value={formData.customer_type || 'residential'}
                     label="Customer Type"
-                    onChange={(e) => handleInputChange('customer_type', e.target.value)}
+                    onChange={(e: SelectChangeEvent) => handleInputChange('customer_type', e.target.value)}
                   >
                     <MenuItem value="residential">Residential</MenuItem>
                     <MenuItem value="commercial">Commercial</MenuItem>
@@ -405,7 +411,7 @@ const CustomerDetail: React.FC = () => {
                   <Select
                     value={formData.preferred_contact_method || 'email'}
                     label="Preferred Contact Method"
-                    onChange={(e) => handleInputChange('preferred_contact_method', e.target.value)}
+                    onChange={(e: SelectChangeEvent) => handleInputChange('preferred_contact_method', e.target.value)}
                   >
                     <MenuItem value="email">Email</MenuItem>
                     <MenuItem value="phone">Phone</MenuItem>
@@ -419,7 +425,7 @@ const CustomerDetail: React.FC = () => {
                     fullWidth
                     label="Company Name"
                     value={formData.company_name || ''}
-                    onChange={(e) => handleInputChange('company_name', e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('company_name', e.target.value)}
                   />
                 </Grid>
               )}
@@ -428,7 +434,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="Street Address"
                   value={formData.street_address || ''}
-                  onChange={(e) => handleInputChange('street_address', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('street_address', e.target.value)}
                   required
                 />
               </Grid>
@@ -437,7 +443,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="City"
                   value={formData.city || ''}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('city', e.target.value)}
                   required
                 />
               </Grid>
@@ -446,7 +452,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="State"
                   value={formData.state || ''}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('state', e.target.value)}
                   required
                 />
               </Grid>
@@ -455,7 +461,7 @@ const CustomerDetail: React.FC = () => {
                   fullWidth
                   label="ZIP Code"
                   value={formData.zip_code || ''}
-                  onChange={(e) => handleInputChange('zip_code', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('zip_code', e.target.value)}
                   required
                 />
               </Grid>
@@ -466,7 +472,7 @@ const CustomerDetail: React.FC = () => {
                   multiline
                   rows={4}
                   value={formData.notes || ''}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('notes', e.target.value)}
                 />
               </Grid>
             </Grid>
@@ -531,7 +537,7 @@ const CustomerDetail: React.FC = () => {
           
           {customer?.properties?.length ? (
             <Grid container spacing={2}>
-              {customer?.properties?.map((property) => (
+              {customer?.properties?.map((property: any) => (
                 <Grid item xs={12} md={6} key={property.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
@@ -539,7 +545,7 @@ const CustomerDetail: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <HomeIcon sx={{ mr: 1, color: 'primary.main' }} />
                           <Typography variant="h6">
-                            {property.property_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            {property.property_type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                           </Typography>
                         </Box>
                         <Box>
@@ -624,7 +630,7 @@ const CustomerDetail: React.FC = () => {
         <TabPanel value={tabValue} index={1}>
           {customer?.contacts?.length ? (
             <Grid container spacing={2}>
-              {customer?.contacts?.map((contact) => (
+              {customer?.contacts?.map((contact: any) => (
                 <Grid item xs={12} md={6} key={contact.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
@@ -652,7 +658,7 @@ const CustomerDetail: React.FC = () => {
         <TabPanel value={tabValue} index={2}>
           {customer?.reviews?.length ? (
             <Grid container spacing={2}>
-              {customer?.reviews?.map((review) => (
+              {customer?.reviews?.map((review: any) => (
                 <Grid item xs={12} key={review.id} component="div">
                   <Card variant="outlined">
                     <CardContent>
@@ -713,7 +719,7 @@ const CustomerDetail: React.FC = () => {
                 <Select
                   value={propertyFormData.property_type || 'single_family'}
                   label="Property Type"
-                  onChange={(e) => handlePropertyInputChange('property_type', e.target.value)}
+                  onChange={(e: SelectChangeEvent) => handlePropertyInputChange('property_type', e.target.value)}
                 >
                   <MenuItem value="single_family">Single Family</MenuItem>
                   <MenuItem value="townhouse">Townhouse</MenuItem>
@@ -731,7 +737,7 @@ const CustomerDetail: React.FC = () => {
                 label="Square Footage"
                 type="number"
                 value={propertyFormData.square_footage || ''}
-                onChange={(e) => handlePropertyInputChange('square_footage', parseInt(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('square_footage', parseInt(e.target.value) || null)}
               />
             </Grid>
             
@@ -740,7 +746,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Street Address"
                 value={propertyFormData.street_address || ''}
-                onChange={(e) => handlePropertyInputChange('street_address', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('street_address', e.target.value)}
                 required
               />
             </Grid>
@@ -750,7 +756,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="City"
                 value={propertyFormData.city || ''}
-                onChange={(e) => handlePropertyInputChange('city', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('city', e.target.value)}
                 required
               />
             </Grid>
@@ -760,7 +766,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="State"
                 value={propertyFormData.state || ''}
-                onChange={(e) => handlePropertyInputChange('state', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('state', e.target.value)}
                 required
               />
             </Grid>
@@ -770,7 +776,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="ZIP Code"
                 value={propertyFormData.zip_code || ''}
-                onChange={(e) => handlePropertyInputChange('zip_code', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('zip_code', e.target.value)}
                 required
               />
             </Grid>
@@ -781,7 +787,7 @@ const CustomerDetail: React.FC = () => {
                 label="Year Built"
                 type="number"
                 value={propertyFormData.year_built || ''}
-                onChange={(e) => handlePropertyInputChange('year_built', parseInt(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('year_built', parseInt(e.target.value) || null)}
               />
             </Grid>
             
@@ -791,7 +797,7 @@ const CustomerDetail: React.FC = () => {
                 label="Bedrooms"
                 type="number"
                 value={propertyFormData.bedrooms || ''}
-                onChange={(e) => handlePropertyInputChange('bedrooms', parseInt(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('bedrooms', parseInt(e.target.value) || null)}
               />
             </Grid>
             
@@ -802,7 +808,7 @@ const CustomerDetail: React.FC = () => {
                 type="number"
                 inputProps={{ step: 0.5 }}
                 value={propertyFormData.bathrooms || ''}
-                onChange={(e) => handlePropertyInputChange('bathrooms', parseFloat(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('bathrooms', parseFloat(e.target.value) || null)}
               />
             </Grid>
             
@@ -815,7 +821,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Main Panel Brand"
                 value={propertyFormData.main_panel_brand || ''}
-                onChange={(e) => handlePropertyInputChange('main_panel_brand', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('main_panel_brand', e.target.value)}
               />
             </Grid>
             
@@ -825,7 +831,7 @@ const CustomerDetail: React.FC = () => {
                 label="Panel Amperage"
                 type="number"
                 value={propertyFormData.main_panel_amperage || ''}
-                onChange={(e) => handlePropertyInputChange('main_panel_amperage', parseInt(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('main_panel_amperage', parseInt(e.target.value) || null)}
               />
             </Grid>
             
@@ -835,7 +841,7 @@ const CustomerDetail: React.FC = () => {
                 label="Panel Age (years)"
                 type="number"
                 value={propertyFormData.main_panel_age || ''}
-                onChange={(e) => handlePropertyInputChange('main_panel_age', parseInt(e.target.value) || null)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('main_panel_age', parseInt(e.target.value) || null)}
               />
             </Grid>
             
@@ -846,7 +852,7 @@ const CustomerDetail: React.FC = () => {
                 type="date"
                 InputLabelProps={{ shrink: true }}
                 value={propertyFormData.electrical_last_updated || ''}
-                onChange={(e) => handlePropertyInputChange('electrical_last_updated', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('electrical_last_updated', e.target.value)}
               />
             </Grid>
             
@@ -856,7 +862,7 @@ const CustomerDetail: React.FC = () => {
                   control={
                     <Checkbox
                       checked={propertyFormData.has_gfci_outlets || false}
-                      onChange={(e) => handlePropertyInputChange('has_gfci_outlets', e.target.checked)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('has_gfci_outlets', e.target.checked)}
                     />
                   }
                   label="Has GFCI Outlets"
@@ -865,7 +871,7 @@ const CustomerDetail: React.FC = () => {
                   control={
                     <Checkbox
                       checked={propertyFormData.has_afci_breakers || false}
-                      onChange={(e) => handlePropertyInputChange('has_afci_breakers', e.target.checked)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('has_afci_breakers', e.target.checked)}
                     />
                   }
                   label="Has AFCI Breakers"
@@ -882,7 +888,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Gate Code"
                 value={propertyFormData.gate_code || ''}
-                onChange={(e) => handlePropertyInputChange('gate_code', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('gate_code', e.target.value)}
               />
             </Grid>
             
@@ -891,7 +897,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Key Location"
                 value={propertyFormData.key_location || ''}
-                onChange={(e) => handlePropertyInputChange('key_location', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('key_location', e.target.value)}
               />
             </Grid>
             
@@ -902,7 +908,7 @@ const CustomerDetail: React.FC = () => {
                 multiline
                 rows={2}
                 value={propertyFormData.access_instructions || ''}
-                onChange={(e) => handlePropertyInputChange('access_instructions', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('access_instructions', e.target.value)}
               />
             </Grid>
             
@@ -915,7 +921,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Emergency Contact Name"
                 value={propertyFormData.emergency_contact_name || ''}
-                onChange={(e) => handlePropertyInputChange('emergency_contact_name', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('emergency_contact_name', e.target.value)}
               />
             </Grid>
             
@@ -924,7 +930,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Emergency Contact Phone"
                 value={propertyFormData.emergency_contact_phone || ''}
-                onChange={(e) => handlePropertyInputChange('emergency_contact_phone', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('emergency_contact_phone', e.target.value)}
               />
             </Grid>
             
@@ -933,7 +939,7 @@ const CustomerDetail: React.FC = () => {
                 fullWidth
                 label="Relationship"
                 value={propertyFormData.emergency_contact_relationship || ''}
-                onChange={(e) => handlePropertyInputChange('emergency_contact_relationship', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('emergency_contact_relationship', e.target.value)}
               />
             </Grid>
             
@@ -944,7 +950,7 @@ const CustomerDetail: React.FC = () => {
                 multiline
                 rows={3}
                 value={propertyFormData.notes || ''}
-                onChange={(e) => handlePropertyInputChange('notes', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handlePropertyInputChange('notes', e.target.value)}
               />
             </Grid>
           </Grid>
@@ -964,5 +970,11 @@ const CustomerDetail: React.FC = () => {
     </Box>
   );
 };
+
+const CustomerDetail: React.FC = () => (
+  <ComponentErrorBoundary componentName="CustomerDetail">
+    <CustomerDetailComponent />
+  </ComponentErrorBoundary>
+);
 
 export default CustomerDetail;

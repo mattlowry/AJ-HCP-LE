@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobApi, customerApi } from '../services/api';
 import { Job, JobListItem } from '../types/job';
+import { CustomerListItem } from '../types/customer';
 import { validateForm, commonValidationRules, formatCurrency } from '../utils/validation';
 import {
   Box,
@@ -44,12 +45,6 @@ import {
 
 // Using Job interface from types/job.ts
 
-interface Customer {
-  id: number;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-}
 
 interface ServiceType {
   id: number;
@@ -78,7 +73,7 @@ const JobList: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState('');
   
   // Demo data for dropdowns
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   
@@ -211,7 +206,7 @@ const JobList: React.FC = () => {
       service_type_id: serviceTypeId,
       status: job.status,
       priority: job.priority,
-      scheduled_date: new Date(job.scheduled_start || job.created_at),
+      scheduled_date: new Date(job.scheduled_start || job.created_at || new Date()),
       assigned_technician_id: technicianId,
       description: job.description || '',
       estimated_duration: job.estimated_duration || 0,
@@ -278,7 +273,9 @@ const JobList: React.FC = () => {
         service_type: serviceTypes.find(st => st.id.toString() === formData.service_type_id)?.name || '',
         status: formData.status as Job['status'],
         priority: formData.priority as Job['priority'],
-        scheduled_start: formData.scheduled_date,
+        scheduled_start: formData.scheduled_date instanceof Date 
+          ? formData.scheduled_date.toISOString() 
+          : formData.scheduled_date,
         assigned_to: formData.assigned_technician_id ? [parseInt(formData.assigned_technician_id)] : [],
         description: formData.description,
         estimated_duration: formData.estimated_duration,

@@ -1,10 +1,17 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { errorLogger, withErrorHandling, ErrorType } from '../utils/errorHandling';
 import { Customer, CustomerListItem, Property, CustomerContact, CustomerReview } from '../types/customer';
 import { Job, JobListItem } from '../types/job';
 import { Invoice, Estimate, Payment } from '../types/billing';
 import { Item, Category, Supplier, StockMovement, PurchaseOrder } from '../types/inventory';
 import { Appointment, TechnicianAvailability, ScheduleConflict } from '../types/scheduling';
+
+// Extend the axios config to include metadata
+interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
+  metadata?: {
+    startTime: number;
+  };
+}
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
@@ -16,13 +23,25 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
-// Request interceptor for adding auth tokens and logging
+// Request interceptor for adding auth tokens, performance monitoring, and logging
 api.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
+  (config: ExtendedAxiosRequestConfig) => {
+    // Add performance timing metadata
+    config.metadata = { startTime: performance.now() };
+    
+    // Add auth token from secure auth service
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Add security headers
+    config.headers['X-Requested-With'] = 'XMLHttpRequest';
+    
+    // Add CSRF protection if available
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
     }
 
     // Log API requests in development
@@ -45,19 +64,38 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling and logging
+// Response interceptor for error handling, performance monitoring, and logging
 api.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Calculate request duration for performance monitoring
+    const config = response.config as ExtendedAxiosRequestConfig;
+    const duration = performance.now() - (config.metadata?.startTime || 0);
+    
+    // Log slow requests
+    if (duration > 2000) {
+      console.warn(`⚠️ Slow API call: ${response.config.method?.toUpperCase()} ${response.config.url} took ${Math.round(duration)}ms`);
+      
+      // Log slow requests for production monitoring
+      if (process.env.NODE_ENV === 'production') {
+        errorLogger.handleError(new Error('Slow API response'), {
+          component: 'APIService',
+          action: `Slow Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
+          userMessage: 'API response was slower than expected'
+        });
+      }
+    }
+
     // Log successful responses in development
     if (process.env.NODE_ENV === 'development') {
-      console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} (${Math.round(duration)}ms)`, {
         status: response.status,
         data: response.data
       });
     }
+    
     return response;
   },
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     // Handle different types of errors
     const errorDetails = errorLogger.handleError(error, {
       component: 'APIService',
@@ -67,11 +105,36 @@ api.interceptors.response.use(
 
     // Handle specific error cases
     if (error.response?.status === 401) {
-      // Unauthorized - clear auth and redirect to login
-      localStorage.removeItem('authToken');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/#/login';
+      // Try to refresh token before giving up
+      const { authService } = await import('./authService');
+      const newToken = await authService.refreshToken();
+      
+      if (newToken && error.config) {
+        // Retry the original request with new token
+        error.config.headers.Authorization = `Bearer ${newToken}`;
+        return api.request(error.config);
+      } else {
+        // Refresh failed, logout user
+        authService.logout();
       }
+    }
+
+    // Handle rate limiting with exponential backoff
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      const delay = retryAfter ? parseInt(retryAfter) * 1000 : 1000;
+      
+      console.warn(`Rate limited. Retrying after ${delay}ms`);
+      
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (error.config) {
+            api.request(error.config).then(resolve).catch(reject);
+          } else {
+            reject(error);
+          }
+        }, delay);
+      });
     }
 
     return Promise.reject(error);

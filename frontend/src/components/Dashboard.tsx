@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
   const statsCards = [
     {
       title: 'Total Customers',
-      value: '0',
+      value: stats.totalCustomers.toString(),
       change: '+12%',
       icon: <PeopleIcon />,
       gradient: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Active Jobs',
-      value: '0',
+      value: stats.activeJobs.toString(),
       change: '+8%',
       icon: <WorkIcon />,
       gradient: 'linear-gradient(135deg, #51C878 0%, #3A9B5C 100%)',
@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Today\'s Schedule',
-      value: '0',
+      value: stats.todaySchedule.toString(),
       change: '+5%',
       icon: <ScheduleIcon />,
       gradient: 'linear-gradient(135deg, #FFD93D 0%, #E6C234 100%)',
@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Monthly Revenue',
-      value: '$0',
+      value: formatCurrency(stats.monthlyRevenue),
       change: '+18%',
       icon: <MoneyIcon />,
       gradient: 'linear-gradient(135deg, #FF6B6B 0%, #E55555 100%)',
