@@ -1,0 +1,5 @@
+Merge branch 'main' of https://github.com/mattlowry/AJ-HCP-LE
+
+# Conflicts:
+#	frontend/src/components/JobList.tsx
+#	frontend/src/services/api.ts

@@ -1,0 +1,38 @@
+0000000000000000000000000000000000000000 8e039e62ec00f3b429553f0cab077b1017a5541b mattlowry <mattlong5@icloud.com> 1748312724 -0400	commit (initial): Initial commit: AJ Long Electric Field Service Management System
+8e039e62ec00f3b429553f0cab077b1017a5541b a70990ffe8bf96dd62c533691d68dc67904d8c94 mattlowry <mattlong5@icloud.com> 1748313126 -0400	commit: Add Vercel deployment configuration
+a70990ffe8bf96dd62c533691d68dc67904d8c94 43f7cff83413486c464349ec22c4ab96425c7142 mattlowry <mattlong5@icloud.com> 1748313301 -0400	commit: Add full-stack deployment configuration
+43f7cff83413486c464349ec22c4ab96425c7142 38193e72947da5851d994e07872b4110069c8b1e mattlowry <mattlong5@icloud.com> 1748316133 -0400	commit: Fix Railway Nixpacks deployment configuration
+38193e72947da5851d994e07872b4110069c8b1e 5ff1556f109a125ee062c6086f95f234767a9d43 mattlowry <mattlong5@icloud.com> 1748316267 -0400	commit: Fix nixpacks.toml TOML syntax error
+5ff1556f109a125ee062c6086f95f234767a9d43 55dd8d4d6e7a2f58fa3533c997c58bd1a7d7b3f9 mattlowry <mattlong5@icloud.com> 1748316826 -0400	commit: Simplify deployment: remove nixpacks.toml to avoid Nix conflicts
+55dd8d4d6e7a2f58fa3533c997c58bd1a7d7b3f9 5572dd4c3b379c55bb3681b6358b392870ec9725 mattlowry <mattlong5@icloud.com> 1748318711 -0400	commit: Fix ALLOWED_HOSTS for Render.com deployment
+5572dd4c3b379c55bb3681b6358b392870ec9725 7fb4bf3fb48806889c99422b0a022a29f8a94d47 mattlowry <mattlong5@icloud.com> 1748319344 -0400	commit: Add explicit domain to ALLOWED_HOSTS
+7fb4bf3fb48806889c99422b0a022a29f8a94d47 09f7074d3a911c9087db8bfa8bd6c2618fe41344 mattlowry <mattlong5@icloud.com> 1748321725 -0400	commit: Fix Material-UI Grid TypeScript errors
+09f7074d3a911c9087db8bfa8bd6c2618fe41344 b998a4d7e89d71e58119ce531eb0c5426fa3946d mattlowry <mattlong5@icloud.com> 1748323554 -0400	commit: Add production settings and fallback view
+b998a4d7e89d71e58119ce531eb0c5426fa3946d 8724bd36ba1958bcefc28f115e71017d6b9ca242 mattlowry <mattlong5@icloud.com> 1748323662 -0400	commit: Add automatic superuser creation for production
+8724bd36ba1958bcefc28f115e71017d6b9ca242 045b11e627b8c77774a935bb64ae35fc50c5c6fe mattlowry <mattlong5@icloud.com> 1748326679 -0400	commit: Fix Django admin 500 error and simplify login
+045b11e627b8c77774a935bb64ae35fc50c5c6fe a583b0df7c2ca2f2c217c4977fccadfa0954a31f mattlowry <mattlong5@icloud.com> 1748327194 -0400	commit: Fix homepage 500 error with robust fallback view
+a583b0df7c2ca2f2c217c4977fccadfa0954a31f 576e68311cf503933cd11a6bf98fd2b43284aff9 mattlowry <mattlong5@icloud.com> 1748351935 -0400	commit: Complete Field Service Management system implementation
+576e68311cf503933cd11a6bf98fd2b43284aff9 b49cbb2b3e70bb166705c81deb3d4732567c8b84 mattlowry <mattlong5@icloud.com> 1748356628 -0400	commit: Fix Material-UI Grid component TypeScript errors
+b49cbb2b3e70bb166705c81deb3d4732567c8b84 f12230e4e5487ddf9628d9d4cc800dc18b1ad312 mattlowry <mattlong5@icloud.com> 1748357591 -0400	commit: Fix React app serving and routing issues
+f12230e4e5487ddf9628d9d4cc800dc18b1ad312 a74f441d2fb028efad7e011d37761119576c6835 mattlowry <mattlong5@icloud.com> 1748379029 -0400	commit: Fix customer creation and dashboard button functionality
+a74f441d2fb028efad7e011d37761119576c6835 bad3ee731b27b6058953da1193f02766b1d8715b mattlowry <mattlong5@icloud.com> 1748404619 -0400	commit: fixed add custoemr and scheduling
+bad3ee731b27b6058953da1193f02766b1d8715b a9005ff142f4b52fdc3fdbfd52e9d86a2003b2b0 mattlowry <mattlong5@icloud.com> 1748504857 -0400	commit: Complete Field Service Management system implementation
+a9005ff142f4b52fdc3fdbfd52e9d86a2003b2b0 4d5358e2373f79d740135423494935b541b22e0c mattlowry <mattlong5@icloud.com> 1748507157 -0400	commit: Complete frontend implementation with comprehensive component suite
+4d5358e2373f79d740135423494935b541b22e0c 97d10a8d225112e5e7d4248dfa85b02972681a74 mattlowry <mattlong5@icloud.com> 1748508146 -0400	commit: Enhance job creation functionality in SchedulingCalendar component
+97d10a8d225112e5e7d4248dfa85b02972681a74 ff79dd88c509062f45fa9aa89788f0013149bf8c mattlowry <mattlong5@icloud.com> 1748652359 -0400	commit: Fix app startup issues and resolve compilation errors
+ff79dd88c509062f45fa9aa89788f0013149bf8c 800dccb2124bef596f4021c3ddc1c507ccf97562 mattlowry <mattlong5@icloud.com> 1748654010 -0400	commit: Replace demo data with real API calls in core components
+800dccb2124bef596f4021c3ddc1c507ccf97562 73e1e3349b88c7837a274abd333b2ff00e2e4cbb mattlowry <mattlong5@icloud.com> 1748655604 -0400	commit: Enhance UX with loading states, error handling, and improved date picker
+73e1e3349b88c7837a274abd333b2ff00e2e4cbb 3d662abe567863b332aae812e0207956311e86cd mattlowry <mattlong5@icloud.com> 1748702931 -0400	commit: Implement comprehensive estimate creation workflow with pricing and line items
+3d662abe567863b332aae812e0207956311e86cd 38d7e614be74d48cd7f03fd837d6898f99686241 mattlowry <mattlong5@icloud.com> 1748726957 -0400	commit: Implement comprehensive inventory integration and tiered material markup system
+38d7e614be74d48cd7f03fd837d6898f99686241 379230384801f8956788dd4f112fe37d2a406891 mattlowry <mattlong5@icloud.com> 1748893802 -0400	commit: Add testing infrastructure, performance optimizations, and documentation
+379230384801f8956788dd4f112fe37d2a406891 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749734137 -0400	commit: Implement modern fluid UI design system with soft aesthetics and smooth animations
+fc749d6a714ba24c3763903347fc6bffedec62f3 4ad3f03758167e19e698a1a8d7bcb14bb8db9c25 mattlowry <mattlong5@icloud.com> 1749781706 -0400	pull --rebase origin main (start): checkout 4ad3f03758167e19e698a1a8d7bcb14bb8db9c25
+4ad3f03758167e19e698a1a8d7bcb14bb8db9c25 910bd112236ef74750ec5a2e5c664ab5cf2d97f9 mattlowry <mattlong5@icloud.com> 1749919492 -0400	commit: Update JobList component with proper type handling and API integration
+910bd112236ef74750ec5a2e5c664ab5cf2d97f9 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749919575 -0400	checkout: moving from 910bd112236ef74750ec5a2e5c664ab5cf2d97f9 to main
+fc749d6a714ba24c3763903347fc6bffedec62f3 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749919779 -0400	reset: moving to HEAD
+fc749d6a714ba24c3763903347fc6bffedec62f3 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749919793 -0400	rebase (finish): refs/heads/main onto 4ad3f03758167e19e698a1a8d7bcb14bb8db9c25
+fc749d6a714ba24c3763903347fc6bffedec62f3 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749919793 -0400	rebase (finish): returning to refs/heads/main
+fc749d6a714ba24c3763903347fc6bffedec62f3 fc749d6a714ba24c3763903347fc6bffedec62f3 mattlowry <mattlong5@icloud.com> 1749919810 -0400	reset: moving to fc749d6a714ba24c3763903347fc6bffedec62f3
+fc749d6a714ba24c3763903347fc6bffedec62f3 e86834a2e9b9d4ffbb48ccfdd8ab310ce3b59c77 mattlowry <mattlong5@icloud.com> 1749920191 -0400	commit (merge): Merge remote updates with local JobList and Dashboard improvements
+e86834a2e9b9d4ffbb48ccfdd8ab310ce3b59c77 bd4383045419d2f9fe68428f582b8406573ba92d mattlowry <mattlong5@icloud.com> 1754505044 -0400	commit: Implement comprehensive production readiness enhancements
+bd4383045419d2f9fe68428f582b8406573ba92d bd4383045419d2f9fe68428f582b8406573ba92d mattlowry <mattlong5@icloud.com> 1754505454 -0400	reset: moving to HEAD
