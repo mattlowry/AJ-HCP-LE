@@ -1,3 +1,0 @@
-# This file ensures Python deployment is detected correctly
-# It points to the actual requirements in the backend directory
--r backend/requirements.txt
